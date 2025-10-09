@@ -1,0 +1,1 @@
+print("Démarrage de la migration vers MongoDB...")
