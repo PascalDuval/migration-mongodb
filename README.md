@@ -9,4 +9,3 @@ Ce projet contient un script de migration vers MongoDB, conteneurisé avec Docke
 ## Utilisation
 - Construire l’image : `docker build -t migration .`
 - Lancer le conteneur : `docker run migration`
-
