@@ -1,1 +1,3 @@
 pymongo>=4.15.3
+pandas>=2.14.0
+numpy>=1.26.4

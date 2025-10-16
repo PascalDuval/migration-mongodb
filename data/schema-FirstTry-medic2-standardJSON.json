@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "_id",
+    "Admission Type",
+    "Age",
+    "Billing Amount",
+    "Blood Type",
+    "Date of Admission",
+    "Discharge Date",
+    "Doctor",
+    "Gender",
+    "Hospital",
+    "Insurance Provider",
+    "Medical Condition",
+    "Medication",
+    "Name",
+    "Room Number",
+    "Test Results"
+  ],
+  "properties": {
+    "_id": {
+      "$ref": "#/$defs/ObjectId"
+    },
+    "Admission Type": {
+      "type": "string"
+    },
+    "Age": {
+      "type": "string"
+    },
+    "Billing Amount": {
+      "type": "string"
+    },
+    "Blood Type": {
+      "type": "string"
+    },
+    "Date of Admission": {
+      "type": "string"
+    },
+    "Discharge Date": {
+      "type": "string"
+    },
+    "Doctor": {
+      "type": "string"
+    },
+    "Gender": {
+      "type": "string"
+    },
+    "Hospital": {
+      "type": "string"
+    },
+    "Insurance Provider": {
+      "type": "string"
+    },
+    "Medical Condition": {
+      "type": "string"
+    },
+    "Medication": {
+      "type": "string"
+    },
+    "Name": {
+      "type": "string"
+    },
+    "Room Number": {
+      "type": "string"
+    },
+    "Test Results": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "ObjectId": {
+      "type": "object",
+      "properties": {
+        "$oid": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        }
+      },
+      "required": [
+        "$oid"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

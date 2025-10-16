@@ -4,11 +4,13 @@ from pymongo import MongoClient
 # Connexion à la base MongoDB locale
 client = MongoClient('mongodb://localhost:27017')
 db = client['FirstTry']
-collection = db['medic']
+collection = db['medic2']
 
 
 # Chemin vers votre fichier CSV
-csv_file_path = 'healthcare_dataset.csv'
+csv_file_path = 'healthcare_dataset_purge.csv'
+# csv_file_path = '../data/healthcare_dataset_purge.csv'
+
 
 
 with open(csv_file_path, mode='r', encoding='utf-8') as file:
