@@ -10,8 +10,7 @@ import os
 import sys
 
 # === CONFIGURATION ===
-FICHIER = "healthcare_dataset_purge.csv"  # Nom du fichier à tester (CSV ou XLSX)
-# csv_file_path = '../data/healthcare_dataset_purge.csv'
+FICHIER = "../data/healthcare_dataset_purge.csv"  # Nom du fichier à tester (CSV ou XLSX)
 
 def charger_fichier(fichier):
     """Charge un fichier CSV ou Excel et retourne un DataFrame pandas."""
