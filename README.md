@@ -40,7 +40,7 @@ Chaque document de la collection importée possède les champs suivants :
 
 ### Index créés
 
-Les index sont créés via `python scripts/migration_crud.py create_indexes` (cf. fonction `create_indexes`), sur la base `FirstTry`, collection `medic2`.
+Les index sont créés via `python scripts/migration_crud.py create_indexes` (cf. fonction `create_indexes`), sur la base `FirstTry`, collection `mediccrud`.
 
 | Nom de l'index | Type | Champ(s) | Observation (explain) |
 | --- | --- | --- | --- |
