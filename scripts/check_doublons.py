@@ -1,5 +1,5 @@
 """
-Script : purge_healthcare_data_auto.py
+Script : check-doublons.py
 But : Détecter et traiter automatiquement les doublons du dataset santé.
       - Si Medical Condition ou Date of Admission diffèrent → suppression des deux lignes.
       - Sinon → fusion avec âge = moyenne arrondie à l'entier supérieur.
@@ -11,8 +11,8 @@ import numpy as np
 import math
 import os
 
-FICHIER_ENTREE = "healthcare_dataset.csv"
-FICHIER_SORTIE = "healthcare_dataset_purge.csv"
+FICHIER_ENTREE = "../data/healthcare_dataset.csv"
+FICHIER_SORTIE = "../data/healthcare_dataset_purge.csv"
 
 
 def charger_fichier(fichier):

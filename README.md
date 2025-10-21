@@ -11,7 +11,7 @@ Important : ce README n'évoque pas Docker — il explique comment cloner le pro
   - `healthcare_dataset.csv` : dataset source (brut).
   - `healthcare_dataset_purge.csv` : dataset nettoyé (généré par `check_doublons.py`).
   - `FirstTry.medic2.json` : export JSON possible pour import dans MongoDB.
-  - `schema-FirstTry-medic2-standardJSON.json` : schéma / mapping utile pour valider ou 
+  - `schema-FirstTry-medic2-standardJSON.json` : schéma / mapping utile pour valider ou documenter la collection.
 
 ## 1) Cloner le projet
 
@@ -28,10 +28,63 @@ cd migration-mongodb
 - Pip (gestionnaire de paquets Python).
 - MongoDB (local) ou un accès MongoDB Atlas/remote si vous préférez.
 
-Installer les dépendances Python du projet :
+Installer les dépendances Python du projet — utilisez un environnement virtuel isolé :
+
+Important — créez et utilisez un environnement virtuel Python avant d'installer les dépendances : cela évite de polluer l'installation globale et garantit que les versions de paquets utilisées par le projet sont isolées.
+
+Windows (PowerShell) — étapes recommandées :
+
+1. Ouvrez PowerShell (si besoin en administrateur pour modifier la politique d'exécution).
+2. Créez un virtualenv nommé `.venv` à la racine du dépôt :
 
 ```powershell
-pip install -r requirements.txt
+python -m venv .venv
+```
+
+3. (Facultatif) autorisez l'exécution de scripts pour la session PowerShell :
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
+```
+
+4. Activez l'environnement :
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+# l'invite PowerShell devient '(.venv) PS C:\...'
+```
+
+5. Mettez pip à jour et installez les dépendances :
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+6. Exécutez les scripts via `python` (qui pointe maintenant vers `.venv\Scripts\python.exe`) :
+
+```powershell
+python scripts\migration_crud.py import_csv --dry
+```
+
+Alternatives :
+
+- Sous l'invite Windows (cmd.exe) :
+
+```cmd
+.venv\Scripts\activate.bat
+```
+
+- Sous Git Bash / WSL / macOS / Linux :
+
+```bash
+source .venv/bin/activate
+```
+
+Remarque : si vous préférez ne pas activer l'environnement, vous pouvez lancer directement l'interpréteur dans `.venv` :
+
+```powershell
+.venv\Scripts\python.exe scripts\migration_crud.py import_csv --dry
 ```
 
 Le fichier `requirements.txt` contient au minimum :
@@ -127,6 +180,60 @@ Remarques
 - `scripts/CrudTry1.py` : exemples CRUD sur MongoDB.
 - `scripts/check_integrity_json.py` : vérifications pour fichiers JSON.
 
+### Nouveau : `scripts/migration_crud.py` (CRUD + import robuste)
+
+`migration_crud.py` est un utilitaire plus complet pour :
+
+- importer le CSV nettoyé avec conversion de types (Age -> int, Date of Admission -> datetime),
+- réaliser des opérations CRUD depuis la ligne de commande (find, find_one, insert_one, update_one, delete_one),
+- créer et lister des index (commande `create_indexes` / `show_indexes`).
+
+Exemples d'utilisation :
+
+- Dry-run d'import (convertit et affiche un échantillon sans insérer) :
+
+```powershell
+python scripts\migration_crud.py import_csv --dry
+```
+
+- Importer réellement (par défaut lit `../data/healthcare_dataset_purge.csv`) :
+
+```powershell
+python scripts\migration_crud.py import_csv
+```
+
+- Rechercher des documents (filtre JSON) :
+
+```powershell
+python scripts\migration_crud.py find --filter '{"Name": "Dupont"}' --limit 50
+```
+
+- Insérer un document JSON :
+
+```powershell
+python scripts\migration_crud.py insert_one '{"Name": "Alice", "Age": 30, "Date of Admission": "2024-01-10"}'
+```
+
+- Mettre à jour un document (upsert optionnel) :
+
+```powershell
+python scripts\migration_crud.py update_one '{"Name": "Alice"}' '{"Age": 31}' --upsert
+```
+
+- Supprimer un document :
+
+```powershell
+python scripts\migration_crud.py delete_one '{"Name": "Alice"}'
+```
+
+Options utiles :
+
+- `--uri` : changer l'URI MongoDB (ex. Atlas)
+- `--db` / `--collection` : nom de la base et de la collection (défaut `FirstTry` / `mediccrud`)
+- `--batch` : taille des batches pour `import_csv`
+
+Le script convertit automatiquement quelques champs connus et crée des index recommandés (Name, Date of Admission, Medical Condition, index composé et index texte) via `create_indexes`.
+
 Exécution générale :
 
 ```powershell
@@ -152,4 +259,96 @@ python scripts/<NomDuScript>.py
 ## 8) Besoin d'aide ?
 
 Ouvrez une issue sur le dépôt : https://github.com/PascalDuval/migration-mongodb/issues
+
+## 9) Script d'automatisation (Windows PowerShell)
+
+Un script PowerShell d'automatisation est fourni : `scripts/run_backup_and_migrate.ps1`.
+Il exécute dans l'ordre :
+
+- sauvegarde de la collection `mediccrud` dans `data/backup_mediccrud_YYYYmmdd_HHMMSS.jsonl` (via `backup_and_drop.py`),
+- suppression (drop) de la collection,
+- dry-run de l'import (`migration_crud.py import_csv --dry`),
+- puis propose de lancer l'import réel si tu confirmes.
+
+Usage :
+
+```powershell
+# exécuter depuis la racine du projet
+./scripts/run_backup_and_migrate.ps1
+```
+
+Le script utilise l'interpréteur Python de l'environnement virtuel `.venv` par défaut ;
+tu peux modifier le chemin vers Python en passant le paramètre `-Python` si besoin.
+
+Exemple (avec URI Atlas) :
+
+```powershell
+./scripts/run_backup_and_migrate.ps1 -Uri "mongodb+srv://<user>:<pass>@cluster0.xyz.mongodb.net" -Db "FirstTry" -Collection "mediccrud"
+
+## 10) Tests et vérifications à effectuer
+
+Avant et après la migration, voici une liste de contrôles recommandés, le rôle de chaque script et comment les exécuter.
+
+1) Pré-migration — qualité et nettoyage
+- `scripts/check_doublons.py` : détecte et traite les doublons (génère `data/healthcare_dataset_purge.csv`).
+  - Exécution : `python scripts/check_doublons.py`
+- `scripts/check_integrity.py` : vérifie colonnes, valeurs manquantes, types mixtes et donne des recommandations.
+  - Exécution : `python scripts/check_integrity.py`
+
+2) Migration (automatisée)
+- `scripts/run_backup_and_migrate.ps1` : automatise la sauvegarde, le drop, le dry-run et, sur confirmation, la migration complète.
+  - Exécution (PowerShell) : `./scripts/run_backup_and_migrate.ps1`
+
+3) Post-migration — validations rapides
+- Vérifier la présence de documents :
+  - `python scripts/migration_crud.py find --filter '{}' --limit 5`
+- Créer les index recommandés :
+  - `python scripts/migration_crud.py create_indexes`
+  - Rôle : accélérer les recherches par `Name`, les filtres et tris par `Date of Admission`, les regroupements par `Medical Condition` et la détection de doublons via un index composé `Name + Date of Admission`. Un index texte sur `Medical Condition` aide la recherche libre.
+
+4) Tests analytiques (exemples)
+- `scripts/AgeByDesease.py` : calcule l'âge moyen par pathologie — exécution : `python scripts/AgeByDesease.py`
+- `scripts/ByBlood.py` : histogramme des groupes sanguins — exécution : `python scripts/ByBlood.py`
+- `scripts/MedicationByCancer.py` et `scripts/MedicationByCancerAndResults.py` : analyses spécifiques sur les traitements pour le cancer.
+
+5) Scripts de validation CRUD (nouveaux)
+- `scripts/validate_medication_by_cancer_crud.py` : exemple CRUD pour lister les médicaments prescrits aux patients avec une pathologie contenant 'Cancer'.
+  - Exécution : `python scripts/validate_medication_by_cancer_crud.py`
+- `scripts/validate_top_medications.py` : agrégation MongoDB pour lister les médicaments les plus prescrits chez les patients atteints de cancer.
+  - Exécution : `python scripts/validate_top_medications.py`
+
+Conseil : suivez l'ordre — nettoyage, sauvegarde, dry-run, migration complète, création d'index, puis validations analytiques.
+
+### Exemples de résultats obtenus (validation)
+
+- Nombre total de patients avec 'Cancer' dans `Medical Condition` (exemple exécuté) : 8294
+- Top médicaments prescrits pour patients atteints de cancer (top 5) :
+  1. Lipitor (1725)
+  2. Ibuprofen (1683)
+  3. Paracetamol (1669)
+  4. Penicillin (1610)
+  5. Aspirin (1607)
+
+Exemple de tableau (format texte et Markdown) produit par `scripts/MedicationByCancerAndResults_crud.py` :
+
+Médicament  | Tests | % Anormal | % Inconclusive | % Normal
+-----------------------------------------------------------
+Lipitor     |  1725 |    32.41% |         34.09% |   33.51%
+Ibuprofen   |  1683 |    34.22% |         32.62% |   33.16%
+Paracetamol |  1669 |    33.73% |         33.37% |   32.89%
+Penicillin  |  1610 |     34.1% |          33.6% |    32.3%
+Aspirin     |  1607 |    34.23% |         32.11% |   33.67%
+
+Tableau Markdown (copier/coller) :
+
+| Médicament | Tests | % Anormal | % Inconclusive | % Normal |
+| --- | --- | --- | --- | --- |
+| Lipitor | 1725 | 32.41% | 34.09% | 33.51% |
+| Ibuprofen | 1683 | 34.22% | 32.62% | 33.16% |
+| Paracetamol | 1669 | 33.73% | 33.37% | 32.89% |
+| Penicillin | 1610 | 34.1% | 33.6% | 32.3% |
+| Aspirin | 1607 | 34.23% | 32.11% | 33.67% |
+
+Les index recommandés ont été créés sur la collection `FirstTry.mediccrud` (voir `migration_crud.py create_indexes`).
+```
 

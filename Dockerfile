@@ -12,7 +12,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Étape 5 : copier ton script Python
-COPY script/migration.py .
+COPY scripts/migration.py .
 
 # Étape 6 : définir la commande par défaut au lancement du conteneur
 CMD ["python", "migration.py"]
