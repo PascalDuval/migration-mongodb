@@ -1,18 +1,17 @@
-# Migration MongoDB
-
-Ce projet contient un script de migration vers MongoDB, conteneurisé avec Docker.
-
-## Structure
-- `/scripts` : contient le script Python de migration.
-- `Dockerfile` : construit l’image Docker pour exécuter le script.
-
-Pour importer les données dans MongoDB, lance le script principal :
-
 # migration-mongodb
 
 Ce dépôt contient des scripts Python pour préparer et migrer un jeu de données santé vers MongoDB, ainsi que plusieurs utilitaires d'analyse et de nettoyage.
 
-Important : ce README n'évoque pas Docker — il explique comment cloner le projet, installer les dépendances et configurer MongoDB localement (Windows), puis lancer les scripts.
+Important : ce README n'évoque pas Docker — il explique comment cloner le projet, installer les dépendances et configurer MongoDB localement (Windows), puis lancer les scripts. Il inclut aussi des instructions pour se connecter et visualiser les données avec MongoDB Compass et pour utiliser MongoDB Atlas.
+
+## Structure
+
+- `scripts/` : scripts Python pour le nettoyage, la vérification, la migration et l'analyse (ex. `migration.py`, `check_doublons.py`, `check_integrity.py`, etc.).
+- `data/` : jeux de données et schémas utilisés par les scripts. Contenu important :
+  - `healthcare_dataset.csv` : dataset source (brut).
+  - `healthcare_dataset_purge.csv` : dataset nettoyé (généré par `check_doublons.py`).
+  - `FirstTry.medic2.json` : export JSON possible pour import dans MongoDB.
+  - `schema-FirstTry-medic2-standardJSON.json` : schéma / mapping utile pour valider ou 
 
 ## 1) Cloner le projet
 
@@ -27,7 +26,7 @@ cd migration-mongodb
 
 - Python 3.10+ installé (Windows). Vérifiez avec : `python --version`.
 - Pip (gestionnaire de paquets Python).
-- MongoDB installé et accessible localement (instructions ci-dessous).
+- MongoDB (local) ou un accès MongoDB Atlas/remote si vous préférez.
 
 Installer les dépendances Python du projet :
 
@@ -37,46 +36,74 @@ pip install -r requirements.txt
 
 Le fichier `requirements.txt` contient au minimum :
 
-- pymongo (client MongoDB)
-- pandas (pour certains scripts d'analyse)
+- `pymongo` (client MongoDB)
+- `pandas` (pour certains scripts d'analyse)
 
 ## 3) Installer et démarrer MongoDB (Windows)
 
-Voici une procédure simple pour installer MongoDB Community Server sur Windows et l'exécuter localement :
+Procédure rapide pour MongoDB Community Server (local) :
 
-1. Téléchargez l'installateur MSI depuis le site officiel : https://www.mongodb.com/try/download/community
+1. Téléchargez l'installateur MSI depuis : https://www.mongodb.com/try/download/community
 2. Lancez l'installateur et choisissez l'installation « Complete ».
-3. Pendant l'installation, vous pouvez cocher l'option « Install MongoDB as a Service ». Si vous choisissez cette option, MongoDB démarrera automatiquement comme service Windows.
-4. Si vous préférez démarrer MongoDB manuellement, repérez le dossier d'installation (par défaut `C:\Program Files\MongoDB\Server\<version>\bin`) et lancez :
-
-```powershell
-"C:\Program Files\MongoDB\Server\<version>\bin\mongod.exe" --dbpath "C:\data\db"
-```
-
-Remplacez `<version>` par votre version. Créez le dossier `C:\data\db` si nécessaire :
+3. Pendant l'installation, vous pouvez cocher « Install MongoDB as a Service » pour un démarrage automatique.
+4. Pour démarrer manuellement (exemple) :
 
 ```powershell
 mkdir C:\data\db
+"C:\Program Files\MongoDB\Server\<version>\bin\mongod.exe" --dbpath "C:\data\db"
 ```
 
-5. Vérifiez que MongoDB écoute sur le port 27017 (par défaut) :
+5. Vérifier la connexion :
 
 ```powershell
-mongo --eval "db.runCommand({ connectionStatus: 1 })"
+mongosh --eval "db.runCommand({ connectionStatus: 1 })"
 ```
 
-Si la commande `mongo` n'est pas disponible, utilisez le client `mongosh` (fourni avec les nouvelles versions) ou testez la connexion depuis Python (ex : `pymongo.MongoClient('mongodb://localhost:27017')`).
+Si `mongosh` ou `mongo` n'est pas dans le PATH, utilisez l'exécutable dans le dossier d'installation ou testez la connexion depuis Python :
+
+```python
+from pymongo import MongoClient
+client = MongoClient('mongodb://localhost:27017')
+print(client.list_database_names())
+```
+
+### MongoDB Compass (visualisation locale)
+
+MongoDB Compass est l'interface graphique officielle pour explorer vos bases MongoDB.
+
+1. Téléchargez Compass : https://www.mongodb.com/try/download/compass
+2. Installez Compass.
+3. Ouvrez Compass et connectez-vous à votre instance locale en utilisant l'URI :
+
+```
+mongodb://localhost:27017
+```
+
+4. Dans Compass vous pouvez :
+   - Parcourir bases et collections (`FirstTry`, `medic2`).
+   - Importer un fichier JSON/CSV directement dans une collection via l'option `IMPORT DATA` (utile pour `FirstTry.medic2.json` ou `healthcare_dataset_purge.csv`).
+
+### MongoDB Atlas (cloud)
+
+Si vous préférez utiliser MongoDB Atlas (service cloud) :
+
+1. Créez un compte gratuit sur https://www.mongodb.com/cloud/atlas
+2. Créez un cluster gratuit (Free Tier) et notez l'URI de connexion (ex. `mongodb+srv://<user>:<password>@cluster0.xyz.mongodb.net`).
+3. Autorisez l'adresse IP de votre machine (ou 0.0.0.0/0 pour tests rapides, non recommandé en production).
+4. Connectez-vous depuis Compass ou votre application en utilisant l'URI Atlas.
+
+Remarque : pour utiliser Atlas avec `scripts/migration.py`, remplacez la ligne de connexion `MongoClient('mongodb://localhost:27017')` par votre URI Atlas (en veillant à utiliser les identifiants corrects et le paramètre de base).
 
 ## 4) Script principal : `scripts/migration.py`
 
 But
-- Importer un fichier CSV nettoyé dans une collection MongoDB.
+- Importer un fichier CSV nettoyé (`data/healthcare_dataset_purge.csv`) dans la collection MongoDB.
 
 Comportement (par défaut)
 - Se connecte à MongoDB sur `mongodb://localhost:27017`.
 - Utilise la base `FirstTry` et la collection `medic2`.
-- Lit le fichier CSV situé par défaut dans `data/healthcare_dataset_purge.csv`.
-- Insère tous les enregistrements lus via `insert_many` puis affiche 5 documents insérés.
+- Lit les lignes du CSV via `csv.DictReader` et insère le lot via `insert_many`.
+- Affiche un message de fin et 5 documents d'exemple.
 
 Exécution
 
@@ -84,75 +111,45 @@ Exécution
 python scripts/migration.py
 ```
 
-Remarques utiles
-- Assurez-vous que MongoDB est démarré et accessible.
-- Vous pouvez modifier le chemin du fichier CSV directement dans `scripts/migration.py` si nécessaire.
-- Le script lit les lignes CSV en tant que dictionnaires (DictReader) — il n'effectue pas de transformation de types (dates, nombres) : si vous avez besoin d'un prétraitement, nettoyez et convertissez les champs avec les scripts du dossier `scripts/` avant d'importer.
+Remarques
+- Assurez-vous que MongoDB (local ou Atlas) est accessible avant l'exécution.
+- Le script ne convertit pas automatiquement les types (dates, nombres) : si nécessaire, prétraitez `healthcare_dataset_purge.csv` avec les scripts de `scripts/` ou adaptez `migration.py`.
 
-## 5) Autres scripts disponibles (description rapide)
+## 5) Autres scripts disponibles (résumé rapide)
 
-Tous les scripts se trouvent dans le dossier `scripts/`. Ci-dessous un résumé et la commande d'exécution :
+- `scripts/check_doublons.py` : nettoie les doublons et génère `data/healthcare_dataset_purge.csv` à partir du CSV brut.
+- `scripts/check_integrity.py` : vérifie la présence de colonnes, valeurs manquantes, doublons et fournit des recommandations.
+- `scripts/AgeByDesease.py` : calcule âge moyen par pathologie (agrégation MongoDB → pandas).
+- `scripts/ByBlood.py` : histogramme des groupes sanguins (agrégation + pandas).
+- `scripts/MedicationByCancer.py`, `scripts/MedicationByCancerAndResults.py` : analyses ciblées sur traitements et résultats.
+- `scripts/DureeMoyenneSejourHopital.py` : calcule la durée moyenne de séjour.
+- `scripts/TopHospital.py` : liste des hôpitaux les plus fréquents.
+- `scripts/CrudTry1.py` : exemples CRUD sur MongoDB.
+- `scripts/check_integrity_json.py` : vérifications pour fichiers JSON.
 
-- `scripts/check_integrity.py`
-	- Vérifie l'intégrité d'un fichier CSV/Excel (`../data/healthcare_dataset_purge.csv` par défaut).
-	- Signale colonnes manquantes, valeurs nulles, doublons et donne des recommandations.
-	- Exécution : `python scripts/check_integrity.py`
+Exécution générale :
 
-- `scripts/check_doublons.py`
-	- Détecte et traite automatiquement les doublons selon des règles (nom, âge proche, etc.).
-	- Fusionne ou supprime les lignes en fonction des différences de diagnostic ou date d'admission.
-	- Lit `../data/healthcare_dataset.csv` et écrit `../data/healthcare_dataset_purge.csv`.
-	- Exécution : `python scripts/check_doublons.py`
+```powershell
+python scripts/<NomDuScript>.py
+```
 
-- `scripts/AgeByDesease.py`
-	- Calcule l'âge moyen par pathologie à partir de la collection MongoDB (agrégation MongoDB puis sortie via pandas).
-	- Exécution : `python scripts/AgeByDesease.py`
-
-- `scripts/ByBlood.py`
-	- Génère un histogramme (tableau) des groupes sanguins à partir de la collection MongoDB (avec pourcentages).
-	- Exécution : `python scripts/ByBlood.py`
-
-- `scripts/MedicationByCancer.py` et `scripts/MedicationByCancerAndResults.py`
-	- Scripts d'analyse des traitements médicamenteux pour les patients atteints de cancer.
-	- Exécution : `python scripts/MedicationByCancer.py`
-
-- `scripts/DureeMoyenneSejourHopital.py`
-	- Calcule la durée moyenne de séjour à partir des données (aggregation attendue dans MongoDB).
-	- Exécution : `python scripts/DureeMoyenneSejourHopital.py`
-
-- `scripts/TopHospital.py`
-	- Identifie les hôpitaux les plus fréquents dans le dataset.
-	- Exécution : `python scripts/TopHospital.py`
-
-- `scripts/CrudTry1.py`
-	- Script d'essai pour opérations CRUD sur MongoDB (insérer, lire, mettre à jour, supprimer).
-	- Exécution : `python scripts/CrudTry1.py`
-
-- `scripts/check_integrity_json.py`
-	- Variante de vérification d'intégrité spécialisée pour JSON/format spécifique.
-	- Exécution : `python scripts/check_integrity_json.py`
-
-> Remarque : plusieurs scripts se connectent à `mongodb://localhost:27017` et à la base `FirstTry` / collection `medic2`. Adaptez la connexion si vous utilisez une autre base/collection ou des identifiants.
-
-## 6) Exemple de workflow recommandé
+## 6) Workflow recommandé
 
 1. Cloner le dépôt.
 2. Installer Python et les dépendances (`pip install -r requirements.txt`).
-3. Installer/démarrer MongoDB localement.
-4. Nettoyer les données brutes : `python scripts/check_doublons.py` (génère `healthcare_dataset_purge.csv`).
+3. Installer/démarrer MongoDB localement ou créer un cluster Atlas.
+4. Nettoyer les données brutes : `python scripts/check_doublons.py`.
 5. Vérifier l'intégrité : `python scripts/check_integrity.py`.
-6. Lancer la migration : `python scripts/migration.py`.
-7. Lancer des analyses depuis MongoDB (`AgeByDesease.py`, `ByBlood.py`, etc.).
+6. Migrer : `python scripts/migration.py`.
+7. Analyser depuis MongoDB (`AgeByDesease.py`, `ByBlood.py`, ...).
 
-## 7) Bonnes pratiques et conseils
+## 7) Conseils
 
-- Sauvegardez toujours votre CSV original avant d'exécuter les scripts de purge.
-- Testez les scripts sur un petit sous-ensemble de données avant de lancer une importation complète.
-- Si vos champs contiennent des dates ou des nombres, adaptez `migration.py` pour convertir les types avant insertion (par ex. convertir `Age` en int, `Date of Admission` en ISODate).
+- Conservez une copie du CSV original.
+- Testez le pipeline sur un petit échantillon avant import complet.
+- Adaptez la connexion MongoDB pour Atlas ou pour un utilisateur/port différent.
 
 ## 8) Besoin d'aide ?
 
-Ouvrez une issue sur le dépôt GitHub : https://github.com/PascalDuval/migration-mongodb/issues
+Ouvrez une issue sur le dépôt : https://github.com/PascalDuval/migration-mongodb/issues
 
----
-Résumé des changements : mise à jour complète du README pour expliquer le clonage, l'installation (Python et MongoDB sous Windows), l'exécution du script principal `migration.py` et la description des autres scripts.
