@@ -13,6 +13,51 @@ Important : ce README n'évoque pas Docker — il explique comment cloner le pro
   - `FirstTry.medic2.json` : export JSON possible pour import dans MongoDB.
   - `schema-FirstTry-medic2-standardJSON.json` : schéma / mapping utile pour valider ou documenter la collection.
 
+## Organisation de la collection MongoDB
+
+### Schéma de la collection `FirstTry.medic2`
+
+Chaque document de la collection importée possède les champs suivants :
+
+- `_id` (`ObjectId` généré par MongoDB).
+- `Name`, `Medical Condition`, `Medication`, `Doctor`, `Hospital`, `Insurance Provider`, `Admission Type`, `Gender`, `Blood Type`, `Test Results` (chaînes de caractères).
+- `Age`, `Billing Amount`, `Room Number` (chaînes de caractères dans le dataset d'origine).
+- `Date of Admission`, `Discharge Date` (dates stockées en chaîne de caractères dans le fichier source ; pensez à les convertir en `ISODate` si vous souhaitez bénéficier des opérateurs de comparaison temporelle natifs).
+
+### Rappel rapide : comment MongoDB exploite les index
+
+- Un index est une structure similaire à l'index d'un livre : elle permet au moteur de requêtes de localiser rapidement les documents correspondant à un filtre, au lieu de parcourir toute la collection (`COLLSCAN`).
+- Les plans d'exécution (`explain`) exposent notamment :
+  - `totalKeysExamined` : nombre d'entrées d'index lues (si > 0, un index a été consulté).
+  - `totalDocsExamined` : nombre de documents effectivement retournés par le moteur après lecture de l'index (à comparer avec la taille totale de la collection).
+  - `nReturned` : nombre de résultats transmis au client.
+  - `executionTimeMillis` : durée totale de la requête.
+  - `winning_plan.stage` : `COLLSCAN` (lecture complète), `IXSCAN`/`FETCH` (lecture d'index), `TEXT_MATCH` (plan textuel), etc.
+- Interprétation pratique :
+  - `keysExamined = 1` et `docsExamined = 1` → l'index identifie immédiatement le document.
+  - `keysExamined ≈ docsExamined ≫ 1` mais bien inférieur à la taille totale → l'index aide mais renvoie de nombreuses correspondances (filtre peu sélectif).
+  - `keysExamined = 0` et `docsExamined = taille_collection` → le plan exécute un `COLLSCAN` (pas d'index utilisable).
+
+### Index créés
+
+Les index sont créés via `python scripts/migration_crud.py create_indexes` (cf. fonction `create_indexes`), sur la base `FirstTry`, collection `medic2`.
+
+| Nom de l'index | Type | Champ(s) | Observation (explain) |
+| --- | --- | --- | --- |
+| `_id_` | Index par défaut | `_id` | Index natif créé automatiquement par MongoDB.
+| `idx_name` | Index simple (`ASC`) | `Name` | Requête `find_by_name` : `totalKeysExamined = 1`, `totalDocsExamined = 1` → lecture ultra ciblée.
+| `idx_date_admission` | Index simple (`ASC`) | `Date of Admission` | Requête `range_date_admission` : 24 clés/documents examinés, au lieu de 50k.
+| `idx_medical_condition` | Index simple (`ASC`) | `Medical Condition` | Requête `filter_medical_condition` : ~8 294 clés/documents examinés — index utile mais filtre peu sélectif.
+| `idx_name_date` | Index composé (`ASC`, `ASC`) | `Name`, `Date of Admission` | Optimise les recherches combinant identité + période.
+| `text_idx_medical_condition` | Index texte | `Medical Condition` | Requête `text_search_medical` : plan `TEXT_MATCH`, plus efficace que le filtre classique sur la même requête textuelle.
+
+### Quand l'index ne sera pas exploité
+
+- Application d'une fonction non sargable dans le filtre (`$toLower`, `$substr`, etc.).
+- Mismatch de type entre l'index et les valeurs stockées (ex. index sur `Date` mais champ enregistré en texte).
+- Filtre trop peu sélectif (ex. retourne ~50 % de la collection) : le planificateur peut privilégier `COLLSCAN`.
+- Combinaison d'opérateurs non compatibles avec l'index.  
+
 ## 1) Cloner le projet
 
 Ouvrez un terminal et exécutez :

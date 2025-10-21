@@ -33,9 +33,9 @@ def extract_explain_summary(explain):
 def main():
     client = MongoClient('mongodb://localhost:27017')
     db = client.get_database('FirstTry')
-    coll = db.get_collection('medic2')
+    coll = db.get_collection('mediccrud')
 
-    print('\n=== INDEXS sur FirstTry.medic2 ===\n')
+    print('\n=== INDEXS sur FirstTry.mediccrud===\n')
     try:
         indexes = coll.index_information()
     except Exception as e:
