@@ -1,98 +1,118 @@
 #!/usr/bin/env python3
 """
-MedicationByCancerAndResults_crud.py
+BloodTypeDistributionCrud.py
 
-Calcule, en mode CRUD (lecture via find), pour chaque médicament utilisé par des patients
-ayant une pathologie contenant 'Cancer' :
-- nombre total de tests
-- pourcentage de résultats 'Abnormal', 'Inconclusive', 'Normal'
+Analyse CRUD (lecture simple) de la répartition des groupes sanguins
+dans la base MongoDB.
 
-Le script illustre comment reproduire une agrégation MongoDB côté application (Python)
-lorsque l'on préfère ou doit faire du traitement en mémoire.
+Pour chaque groupe sanguin :
+  - Nombre total de patients
+  - Pourcentage du total
+
+Implémenté 100 % côté Python, sans pipeline d’agrégation MongoDB.
 
 Usage :
-  python scripts/MedicationByCancerAndResults_crud.py
-
+  python scripts/BloodTypeDistributionCrud.py
+  ou
+  python scripts/BloodTypeDistributionCrud.py --db FirstTry --collection medic2
 """
-from pymongo import MongoClient
-from collections import defaultdict, Counter
- 
 
-URI = 'mongodb://localhost:27017'
-DB = 'FirstTry'
-COL = 'mediccrud'
+import argparse
+from collections import Counter
 
-client = MongoClient(URI)
-db = client[DB]
-coll = db[COL]
+from pymongo.errors import PyMongoError
+from functions_crud.crud_ops import DEFAULT_URI, DEFAULT_DB, get_collection
 
-# Filtre : Medical Condition contient 'Cancer' (insensible à la casse)
-filter_q = {'Medical Condition': {'$regex': 'Cancer', '$options': 'i'}}
 
-# Champs d'intérêt : Medication et Test Results
-projection = {'Medication': 1, 'Test Results': 1}
+# === 1️⃣ Lecture CRUD et calcul côté Python ===
+def compute_bloodtype_distribution(coll):
+    """Calcule la distribution des groupes sanguins à partir des documents MongoDB."""
+    try:
+        # Lecture CRUD simple
+        cursor = coll.find({"Blood Type": {"$exists": True, "$ne": None}}, {"Blood Type": 1})
+    except PyMongoError as exc:
+        print(f"❌ Erreur MongoDB lors de la lecture : {exc}")
+        return []
 
-cursor = coll.find(filter_q, projection)
+    counter = Counter()
+    total = 0
 
-# Regrouper par médicament
-stats = defaultdict(lambda: Counter())
+    for doc in cursor:
+        blood_type = str(doc.get("Blood Type", "Inconnu")).strip()
+        if not blood_type:
+            continue
+        counter[blood_type] += 1
+        total += 1
 
-for doc in cursor:
-    med = doc.get('Medication') or 'Inconnu'
-    # Test Results peut être une valeur unique ou une liste ; on normalise
-    tr = doc.get('Test Results')
-    if tr is None:
-        continue
-    # Si c'est une liste, étendre
-    if isinstance(tr, list):
-        results = tr
-    else:
-        results = [tr]
-
-    for r in results:
-        key = str(r).strip()
-        stats[med][key] += 1
-        stats[med]['_total'] += 1
-
-# Préparer les lignes et trier par nombre de tests décroissant
-rows = []
-for med, counter in stats.items():
-    total = counter.get('_total', 0)
     if total == 0:
-        continue
-    abnormal = counter.get('Abnormal', 0)
-    inconclusive = counter.get('Inconclusive', 0)
-    normal = counter.get('Normal', 0)
+        return []
 
-    abnormal_pct = round((abnormal / total) * 100, 2) if total else 0.0
-    inconclusive_pct = round((inconclusive / total) * 100, 2) if total else 0.0
-    normal_pct = round((normal / total) * 100, 2) if total else 0.0
+    # Préparer les résultats sous forme de liste de dictionnaires
+    results = [
+        {
+            "Blood Type": bt,
+            "count": count,
+            "percentage": (count / total) * 100,
+        }
+        for bt, count in sorted(counter.items(), key=lambda x: x[1], reverse=True)
+    ]
+    return results
 
-    rows.append((med, total, abnormal_pct, inconclusive_pct, normal_pct))
 
-rows.sort(key=lambda x: x[1], reverse=True)  # tri par total décroissant
+# === 2️⃣ Affichage formaté ===
+def display_results(results):
+    """Affiche les résultats avec pandas si disponible, sinon en texte brut."""
+    if not results:
+        print("⚠️ Aucun groupe sanguin trouvé dans la collection.")
+        return
 
-# Calcul des largeurs de colonne
-hdr = ("Médicament", "Tests", "% Anormal", "% Inconclusive", "% Normal")
-col_widths = [max(len(str(r[i])) for r in rows) if rows else len(hdr[i]) for i in range(5)]
-for i, h in enumerate(hdr):
-    col_widths[i] = max(col_widths[i], len(h))
+    try:
+        import pandas as pd
+        df = pd.DataFrame(results)
+        df.rename(
+            columns={
+                "Blood Type": "Groupe Sanguin",
+                "count": "Nombre de Patients",
+                "percentage": "Pourcentage",
+            },
+            inplace=True,
+        )
+        df["Pourcentage"] = df["Pourcentage"].map("{:.2f}%".format)
+        print("\n🩸 Répartition des Groupes Sanguins (CRUD Python) :\n")
+        print(df.to_string(index=False))
+    except ImportError:
+        print("\n🩸 Répartition des Groupes Sanguins (CRUD Python) — mode texte :\n")
+        for r in results:
+            print(f"{r['Blood Type']}: {r['count']} ({r['percentage']:.2f}%)")
 
-sep = " | "
 
-print("\n📊 Analyse (CRUD) des résultats de tests pour la condition 'Cancer':\n")
-# Header aligné
-header_line = sep.join(h.ljust(col_widths[i]) for i, h in enumerate(hdr))
-print(header_line)
-print("-" * len(header_line))
+# === 3️⃣ Fonction principale ===
+def main(uri: str, db_name: str, coll_name: str) -> int:
+    print("=== 🧾 Analyse CRUD des Groupes Sanguins ===")
 
-for med, total, abnormal_pct, inconclusive_pct, normal_pct in rows:
-    line = sep.join([
-        str(med).ljust(col_widths[0]),
-        str(total).rjust(col_widths[1]),
-        (f"{abnormal_pct}%").rjust(col_widths[2]),
-        (f"{inconclusive_pct}%").rjust(col_widths[3]),
-        (f"{normal_pct}%").rjust(col_widths[4]),
-    ])
-    print(line)
+    coll = get_collection(uri, db_name, coll_name)
+    results = compute_bloodtype_distribution(coll)
+    display_results(results)
 
+    return 0
+
+
+# === 4️⃣ Parsing des arguments CLI ===
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Calcul de la répartition des groupes sanguins (lecture CRUD)"
+    )
+    parser.add_argument("--uri", default=DEFAULT_URI, help="URI MongoDB")
+    parser.add_argument("--db", default=DEFAULT_DB, help="Nom de la base MongoDB")
+    parser.add_argument(
+        "--collection",
+        default="mediccrud",
+        help="Nom de la collection MongoDB (défaut : mediccrud)",
+    )
+    return parser.parse_args()
+
+
+# === 5️⃣ Point d’entrée ===
+if __name__ == "__main__":
+    args = parse_args()
+    raise SystemExit(main(args.uri, args.db, args.collection))
