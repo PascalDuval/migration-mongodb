@@ -1,4 +1,4 @@
-# 🧬 migration-mongodb
+# 🧬 Migration d'une base médicale sur  MongoDB
 
 Ce dépôt GitHub contient des scripts Python pour **préparer, nettoyer, migrer et analyser** un jeu de données médicales dans MongoDB.  
 Il est hébergé sur :  
@@ -226,7 +226,6 @@ Puis exécute :
 pytest -v tests/test_integration_real.py
 ```
 
-⚠️ Ces tests modifient potentiellement la base — à utiliser sur une copie ou une base de test.
 
 ---
 
