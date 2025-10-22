@@ -1,71 +1,55 @@
 # 🧬 migration-mongodb
 
-Ce dépôt contient des scripts Python pour **préparer, nettoyer, migrer et analyser** un jeu de données de santé dans MongoDB.  
-Certains scripts ont été modernisés pour fonctionner **en pur CRUD Python** (sans pipelines d’agrégation MongoDB), offrant une meilleure portabilité, lisibilité et maîtrise du traitement.
+Ce dépôt GitHub contient des scripts Python pour **préparer, nettoyer, migrer et analyser** un jeu de données médicales dans MongoDB.  
+Il est hébergé sur :  
+👉 **[https://github.com/PascalDuval/migration-mongodb](https://github.com/PascalDuval/migration-mongodb)**
+
+---
+
+## 🚀 Cloner le projet
+
+Ouvrez un terminal PowerShell (Windows) ou bash (Linux/macOS) et exécutez :
+
+```bash
+git clone https://github.com/PascalDuval/migration-mongodb.git
+cd migration-mongodb
+````
+
+Cela créera un dossier local `migration-mongodb/` contenant tous les scripts, données et tests du projet.
 
 ---
 
 ## 📁 Structure
 
-- **`scripts/`** : scripts Python pour le nettoyage, la vérification, la migration et l’analyse.  
-  (ex. `migration_crud.py`, `check_doublons.py`, `check_integrity.py`, etc.)
-- **`data/`** : jeux de données utilisés :
-  - `healthcare_dataset.csv` — dataset brut original.  
-  - `healthcare_dataset_purge.csv` — dataset nettoyé (généré par `check_doublons.py`).  
+* **`scripts/`** : scripts Python de migration, vérification et analyses CRUD.
+  (ex. `migration_crud.py`, `check_doublons.py`, `TopHospitalCrud.py`, etc.)
+* **`data/`** : jeux de données (`healthcare_dataset.csv`, `healthcare_dataset_purge.csv`).
+* **`tests/`** : tests unitaires et d’intégration pour valider le bon fonctionnement du projet.
+
 ---
 
 ## 🧩 Organisation de la collection MongoDB
 
 ### Schéma de la collection `FirstTry.mediccrud`
 
-Chaque document comporte les champs :
-
-| Type | Champs principaux |
-|------|--------------------|
-| Chaînes | `Name`, `Medical Condition`, `Medication`, `Doctor`, `Hospital`, `Insurance Provider`, `Admission Type`, `Gender`, `Blood Type`, `Test Results` |
-| Nombres | `Age`, `Billing Amount`, `Room Number` |
-| Dates | `Date of Admission`, `Discharge Date` |
-| ID | `_id` (`ObjectId` généré automatiquement) |
-
+| Type    | Champs principaux                                                                                                                               |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chaînes | `Name`, `Medical Condition`, `Medication`, `Doctor`, `Hospital`, `Insurance Provider`, `Gender`, `Blood Type`, `Admission Type`, `Test Results` |
+| Nombres | `Age`, `Billing Amount`, `Room Number`                                                                                                          |
+| Dates   | `Date of Admission`, `Discharge Date`                                                                                                           |
+| ID      | `_id` (`ObjectId` automatique)                                                                                                                  |
 
 ---
 
-## ⚙️ Index créés automatiquement
-
-Création via :
-```powershell
-python scripts/migration_crud.py create_indexes
-````
-
-| Nom                          | Type        | Champ(s)                    | Utilisation                  |
-| ---------------------------- | ----------- | --------------------------- | ---------------------------- |
-| `_id_`                       | Automatique | `_id`                       | Index natif                  |
-| `idx_name`                   | Simple      | `Name`                      | Recherche rapide par nom     |
-| `idx_date_admission`         | Simple      | `Date of Admission`         | Filtres temporels            |
-| `idx_medical_condition`      | Simple      | `Medical Condition`         | Regroupement pathologies     |
-| `idx_name_date`              | Composé     | `Name`, `Date of Admission` | Combinaison identité + date  |
-| `text_idx_medical_condition` | Texte       | `Medical Condition`         | Recherche textuelle efficace |
-
----
-
-## 🚀 1) Cloner le projet
-
-```powershell
-git clone https://github.com/PascalDuval/migration-mongodb.git
-cd migration-mongodb
-```
-
----
-
-## 🧠 2) Environnement et dépendances
+## ⚙️ Installation et environnement
 
 ### Prérequis
 
-* Python 3.10+
-* MongoDB (local - Compass/Atlas)
-* `pip`
+* **Python 3.10+**
+* **MongoDB** (local ou Atlas)
+* **pip** installé
 
-### Installation (Windows PowerShell)
+### Installation recommandée (Windows PowerShell)
 
 ```powershell
 python -m venv .venv
@@ -75,191 +59,242 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-> 📦 Principales dépendances : `pymongo`, `pandas`
+> Principales dépendances : `pymongo`, `pandas`
 
 ---
 
-## 🗄️ 3) Démarrer MongoDB localement
+## 🧾 Script principal : `scripts/migration_crud.py`
 
-### Étapes rapides
+Ce script gère la **migration complète** du CSV nettoyé vers MongoDB.
 
-```powershell
-mkdir C:\data\db
-"C:\Program Files\MongoDB\Server\<version>\bin\mongod.exe" --dbpath "C:\data\db"
-mongosh --eval "db.runCommand({ connectionStatus: 1 })"
-```
 
-### Interface graphique
+### Fonctionnalités principales
 
-Téléchargez [**MongoDB Compass**](https://www.mongodb.com/try/download/compass)
-et connectez-vous à :
+* Import CSV → MongoDB (`import_csv`)
+* Conversion automatique :
 
-```
-mongodb://localhost:27017
-```
+  * `Age` → entier
+  * `Date of Admission` / `Discharge Date` → `datetime`
+  * `Billing Amount` → float
+* Création d’index
+* Commandes CRUD (find, insert, update, delete)
+* Mode `--dry` (voir ci-dessous)
 
 ---
 
-## ☁️ 4) Connexion à MongoDB Atlas (optionnel)
+## 🧪 Le mode `--dry` (dry-run)
 
-1. Créez un compte sur [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Créez un cluster gratuit
-3. Autorisez votre IP (`0.0.0.0/0` pour test)
-4. Copiez l’URI de connexion et utilisez-la dans vos scripts :
+Le mode `--dry` permet de **tester la migration sans rien insérer dans MongoDB**.
+Les données sont lues, converties et affichées, mais **aucun `insert` n’est effectué**.
 
-   ```
-   mongodb+srv://<user>:<password>@cluster0.mongodb.net
-   ```
-
----
-
-## 🧾 5) Script principal : `scripts/migration.py`
-
-### Rôle
-
-Importe le CSV lui-même préalablement nettoyé (`data/healthcare_dataset_purge.csv`) dans la collection MongoDB.
-
-### Exécution
-
-```powershell
-python scripts/migration.py
-```
-
-### Détails
-
-* Connexion à `mongodb://localhost:27017`
-* Base : `FirstTry`, Collection : `mediccrud`
-* Lecture du CSV → `insert_many`
-
----
-
-## 📊 6) Scripts d’analyse CRUD Python
-
-Les scripts d’analyse n'utilise pas des **pipelines MongoDB** ; ils ont été **réécrits en pur CRUD Python**. Ils effectuent leurs calculs côté client, directement en Python, pour plus de clarté et d’indépendance.
-
-Tous utilisent :
-
-* `functions_crud.crud_ops.get_collection()` pour la connexion.
-* Des structures Python (`Counter`, `mean`, `pandas`) pour l’analyse.
-
-### 🔍 Scripts disponibles
-
-| Script                                        | Fonction                                                                                               | Méthode                                         |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `scripts/AverageAgeByConditionCrud.py`        | Calcule l’âge moyen (arrondi) des patients par pathologie.                                             | Lecture CRUD + moyenne Python                   |
-| `scripts/BloodTypeDistributionCrud.py`        | Répartition des groupes sanguins avec pourcentages.                                                    | Lecture CRUD + `Counter()`                      |
-| `scripts/MedicationByCancerAndResultsCrud.py` | Analyse des résultats de tests (Normal / Anormal / Inconclusive) pour chaque médicament lié au cancer. | Lecture CRUD + regroupement Python              |
-| `scripts/ValidateTopMedicationsCrud.py`       | Médicaments les plus prescrits aux patients atteints de cancer.                                        | Lecture CRUD + tri Python                       |
-| `scripts/DureeMoyenneSejourHospitalCrud.py`   | Calcule la durée moyenne des séjours hospitaliers.                                                     | Lecture CRUD + calcul de durée                  |
-| `scripts/TopHospitalCrud.py`                  | Identifie l’hôpital avec le plus d’admissions.                                                         | Lecture CRUD + `Counter()`                      |
-| `scripts/demo_crud_flow.py`                   | Démonstration complète des opérations CRUD.                                                            | Lecture / insertion / mise à jour / suppression |
-
-### 🧠 Comparatif
-
-| Avant (agrégation MongoDB) | Maintenant (CRUD Python)         |
-| -------------------------- | -------------------------------- |
-| `$group`, `$avg`, `$sort`  | Calculs via `Counter` / `mean()` |
-| Calcul serveur             | Calcul client                    |
-| Pipelines complexes        | Code simple et lisible           |
-| Risque de `COLLSCAN`       | Lecture directe sur index        |
-
-### ⚙️ Exécution - Exemples
-
-```powershell
-python scripts/AverageAgeByConditionCrud.py
-python scripts/TopHospitalCrud.py
-python scripts/ValidateTopMedicationsCrud.py --top 5
-```
-
----
-
-## 🧰 7) `scripts/migration_crud.py`
-
-Script principal pour :
-
-* Importer les données nettoyées (avec conversion automatique des types)
-* Réaliser des opérations CRUD
-* Créer et lister les index
-
-### Exemples
+### Exemple :
 
 ```powershell
 python scripts/migration_crud.py import_csv --dry
-python scripts/migration_crud.py create_indexes
-python scripts/migration_crud.py find --filter '{"Name": "Dupont"}' --limit 5
-python scripts/migration_crud.py insert_one '{"Name": "Alice", "Age": 30}'
+```
+
+👉 Le script charge le CSV, effectue toutes les conversions de type,
+et affiche un extrait des données converties sans modifier la base.
+
+Ce mode est **idéal pour valider les conversions** avant une migration réelle.
+
+---
+
+## 🔍 Les conversions de types
+
+Le script utilise des fonctions internes pour fiabiliser les types :
+
+| Fonction         | Rôle                                          | Exemple                                  |
+| ---------------- | --------------------------------------------- | ---------------------------------------- |
+| `_safe_int()`    | Convertit une valeur en entier si possible    | `"42"` → `42`, `"abc"` → `None`          |
+| `_to_datetime()` | Transforme une date texte en objet `datetime` | `"2024-01-10"` → `datetime(2024, 1, 10)` |
+| `_safe_float()`  | Convertit une chaîne en float sécurisé        | `"10.5"` → `10.5`, `"n/a"` → `None`      |
+
+Ces fonctions évitent que le script plante si le CSV contient des valeurs non conformes.
+
+---
+
+## ✅ Tests unitaires et d’intégration (`tests/`)
+
+Une suite de tests pytest a été ajoutée pour vérifier que `migration_crud.py` fonctionne correctement.
+
+### 📁 Fichier principal :
+
+`scripts/tests/test_migration_crud.py`
+
+### 🔧 Technologies utilisées :
+
+* **pytest** → moteur de test Python
+* **mongomock** → simule MongoDB sans serveur réel
+* **pytest-mock** → gestion des mocks automatiques
+
+### 🧩 Ce que les tests valident :
+
+| Type de test             | Fonction testée                                        | Objectif                                        |
+| ------------------------ | ------------------------------------------------------ | ----------------------------------------------- |
+| **Unitaires**            | `_safe_int`, `_to_datetime`, `convert_dataframe_types` | Vérifient les conversions de type               |
+| **CRUD simulé**          | `insert_one`, `find`, `update_one`, `delete_one`       | Vérifient les opérations CRUD sur base mockée   |
+| **Indexation**           | `create_indexes`                                       | Vérifie la création des index                   |
+| **Import CSV (dry-run)** | `import_csv`                                           | Vérifie la lecture et conversion sans insertion |
+
+---
+
+### 🧠 Explication : qu’est-ce qu’un `assert` ?
+
+Un **`assert`** est une instruction de test :
+elle vérifie qu’une condition est vraie.
+Si elle ne l’est pas, le test échoue immédiatement.
+
+Exemples :
+
+```python
+assert 1 + 1 == 2         # ✅ Passe
+assert "Alice" in ["Bob"] # ❌ Échec
+```
+
+Dans nos tests :
+
+```python
+assert isinstance(records[0]["Age"], int)
+```
+
+➡️ Vérifie que le champ `Age` est bien un entier après conversion.
+
+---
+
+## 🧰 Lancer les tests
+
+Depuis la racine du projet :
+
+```bash
+# Installer les dépendances de test
+pip install pytest mongomock pytest-mock pandas
+
+# Lancer les tests
+pytest -v
+```
+
+### Exemple de sortie attendue :
+
+```
+==================== test session starts ====================
+collected 9 items
+
+tests/test_migration_crud.py .........                        [100%]
+
+==================== 9 passed in 2.3s ========================
 ```
 
 ---
 
-## 🔄 8) Workflow recommandé
+## 🔄 Quand exécuter les tests ?
 
-1. **Cloner le dépôt**
-2. **Créer un environnement virtuel**
-3. **Installer MongoDB ou se connecter à Atlas**
-4. **Nettoyer les données** → `check_doublons.py`
-5. **Vérifier l’intégrité** → `check_integrity.py`
-6. **Importer les données** → `migration_crud.py`
-7. **Créer les index**
-8. **Lancer les scripts d’analyse CRUD**
+🧪 Les tests doivent être exécutés **avant toute migration réelle**,
+afin de s’assurer que :
+
+* les conversions sont correctes,
+* le CSV est bien lu,
+* les index sont valides,
+* et les opérations CRUD fonctionnent.
+
+👉 Cela constitue une **phase de validation pré-migration**.
 
 ---
 
-## ⚡ 9) Automatisation : `scripts/run_backup_and_migrate.ps1`
+## 🧩 Tests d’intégration réels (optionnels)
 
-Script PowerShell pour :
+En complément des tests mockés, il est possible de **tester sur une vraie base MongoDB locale**
+(`mongodb://localhost:27017`).
 
-* Sauvegarder la collection `mediccrud`
-* Supprimer la collection existante
-* Lancer un dry-run d’import
-* Confirmer l’import complet
+Crée un fichier `tests/test_integration_real.py` contenant :
 
-```powershell
-./scripts/run_backup_and_migrate.ps1
+```python
+from pymongo import MongoClient
+import migration_crud as mc
+
+def test_real_connection():
+    client = MongoClient("mongodb://localhost:27017")
+    db = client["FirstTry"]
+    coll = db["mediccrud"]
+    assert coll is not None
+    assert isinstance(coll.count_documents({}), int)
 ```
 
-Paramètres optionnels :
+Puis exécute :
 
-* `-Uri`, `-Db`, `-Collection`, `-Python`
-
----
-
-## 🧪 10) Tests analytiques et validations
-
-Avant et après migration, exécutez :
-
-```powershell
-python scripts/check_doublons.py
-python scripts/check_integrity.py
-python scripts/migration_crud.py create_indexes
-python scripts/AverageAgeByConditionCrud.py
-python scripts/TopHospitalCrud.py
+```bash
+pytest -v tests/test_integration_real.py
 ```
 
----
-
-## 📈 11) Exemple de résultat
-
-| Médicament  | Tests | % Anormal | % Inconclusive | % Normal |
-| ----------- | ----- | --------- | -------------- | -------- |
-| Lipitor     | 1725  | 32.41%    | 34.09%         | 33.51%   |
-| Ibuprofen   | 1683  | 34.22%    | 32.62%         | 33.16%   |
-| Paracetamol | 1669  | 33.73%    | 33.37%         | 32.89%   |
-| Penicillin  | 1610  | 34.10%    | 33.60%         | 32.30%   |
-| Aspirin     | 1607  | 34.23%    | 32.11%         | 33.67%   |
+⚠️ Ces tests modifient potentiellement la base — à utiliser sur une copie ou une base de test.
 
 ---
 
-## 💬 12) Support
+## 📈  Résumé des étapes
 
-En cas de problème ou suggestion d’amélioration :
+1. Cloner le dépôt :
+
+   ```bash
+   git clone https://github.com/PascalDuval/migration-mongodb.git
+   cd migration-mongodb
+   ```
+
+2. Créer et activer un environnement virtuel :
+
+   ```bash
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+3. Installer les dépendances :
+
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+
+4. Nettoyer les données :
+
+   ```bash
+   python scripts/check_doublons.py
+   ```
+
+5. Vérifier l’intégrité :
+
+   ```bash
+   python scripts/check_integrity.py
+   ```
+
+6. **Exécuter les tests unitaires et d’intégration :**
+
+   ```bash
+   pytest -v
+   ```
+
+7. Si tout est vert ✅ :
+
+   ```bash
+   python scripts/migration_crud.py import_csv
+   ```
+
+8. Créer les index :
+
+   ```bash
+   python scripts/migration_crud.py create_indexes
+   ```
+
+9. Lancer les analyses CRUD afinb de vérifier que tout marche bien:
+
+   ```bash
+   python scripts/TopHospitalCrud.py
+   python scripts/AgeByDeseaseCrud.py
+   python scripts/MedicationByCancerAndResultsCrud.py
+   etc...
+   ```
+
+---
+
+## 💬 Support
+
+Pour toute question ou suggestion :
 👉 [Ouvrez une issue sur GitHub](https://github.com/PascalDuval/migration-mongodb/issues)
 
-```
-
----
-
-💡 **Prêt à copier-coller** : tout le contenu ci-dessus peut être inséré directement dans ton fichier  
-`migration-mongodb/README.md`.  
-Tu n’as rien à fusionner : c’est un seul document Markdown complet et cohérent.
-```
