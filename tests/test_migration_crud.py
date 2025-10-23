@@ -132,4 +132,8 @@ def test_import_csv_dry_run(tmp_path, monkeypatch):
 
     monkeypatch.setattr(mc, "get_collection", lambda uri, db, coll: mongomock.MongoClient()["FirstTry"]["mediccrud"])
 
+<<<<<<< HEAD
     mc.import_csv("uri", "FirstTry", "mediccrud", str(csv_file), dry_run=True)
+=======
+    mc.import_csv("uri", "FirstTry", "mediccrud", str(csv_file), dry_run=True)
+>>>>>>> origin/main

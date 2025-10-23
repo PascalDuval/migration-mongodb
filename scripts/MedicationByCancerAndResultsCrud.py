@@ -95,3 +95,4 @@ for med, total, abnormal_pct, inconclusive_pct, normal_pct in rows:
         (f"{normal_pct}%").rjust(col_widths[4]),
     ])
     print(line)
+
