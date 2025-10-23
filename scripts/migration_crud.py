@@ -2,10 +2,6 @@
 """
 migration_crud.py
 
-Script d'assistance pour effectuer des opérations CRUD (Create, Read, Update, Delete)
-sur une collection MongoDB. Conçu pour fonctionner avec une instance locale ou
-avec MongoDB Atlas et compatible avec MongoDB Compass (les opérations sont standard
-pymongo).
 
 Fonctionnalités principales :
 - import_csv : lire un CSV, convertir les types (Age -> int, Date of Admission -> datetime)

@@ -1,2 +1,7 @@
 restaurants.json_
 divers/
+*/__pycache__.py/
+*/__pycache__/
+*/__init__.py/
+*/__init__/
+__init__.py

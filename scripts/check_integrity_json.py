@@ -15,7 +15,7 @@ import os
 import sys
 
 # === CONFIGURATION ===
-FICHIER_JSON = "../data/FirstTry.medic2.json"  # Fichier JSON MongoDB
+FICHIER_JSON = "../data/FirstTry.mediccrud.json"  # Fichier JSON MongoDB
 
 
 # === 1. Chargement du fichier JSON ===
