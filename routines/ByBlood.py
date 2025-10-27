@@ -2,6 +2,9 @@
 
 import argparse
 from pymongo.errors import PyMongoError
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 from functions_crud.crud_ops import DEFAULT_URI, DEFAULT_DB, get_collection
 
 

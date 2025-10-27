@@ -1,20 +1,22 @@
-services/migration.yml
-Nouveau
-+15
--0
+version: "3.9"
 
 services:
-  migration:
+  migration-cli:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.migration
-    image: migration-mongodb-runner:latest
-    env_file:
-      - ../env/migration.env
-    working_dir: /app
+      dockerfile: Dockerfile
+    environment:
+      MIGRATION_MONGODB_URI: ${MIGRATION_MONGODB_URI}
+      MIGRATION_DEFAULT_DB: ${MIGRATION_DEFAULT_DB}
+      MIGRATION_DEFAULT_COLLECTION: ${MIGRATION_DEFAULT_COLLECTION}
+    depends_on:
+      - mongodb
+    networks:
+      - migration
     volumes:
       - ../data:/app/data:ro
-      - ../scripts:/app/scripts:ro
-    entrypoint: ["python", "scripts/migration_crud.py"]
     command: ["--help"]
-    tty: true
+
+networks:
+  migration:
+    name: ${COMPOSE_PROJECT_NAME:-migration}_network
