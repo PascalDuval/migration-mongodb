@@ -4,9 +4,6 @@ divers/
 */__pycache__/
 */__init__.py/
 */__init__/
-<<<<<<< HEAD
 __init__.py
-=======
-__init__.py
-test_conversion.cpython-312-pytest-8.4.2.pyc
->>>>>>> origin/main
+docker/
+docker/*
