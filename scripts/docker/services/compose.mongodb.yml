@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:${MONGODB_VERSION:-6.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-migration}-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_APP_USER: ${MONGO_APP_USER}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
+      MONGO_APP_DATABASE: ${MONGO_APP_DATABASE}
+      MONGO_APP_ROLES: ${MONGO_APP_ROLES}
+      MONGO_APP_AUTH_SOURCE: ${MONGO_APP_AUTH_SOURCE}
+    ports:
+      - "${MONGODB_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - migration
+
+volumes:
+  mongodb_data:
+    name: ${COMPOSE_PROJECT_NAME:-migration}_mongodb_data
+
+networks:
+  migration:
+    name: ${COMPOSE_PROJECT_NAME:-migration}_network

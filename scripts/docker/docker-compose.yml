@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  mongodb:
+    extends:
+      file: ./docker/services/mongodb.yml
+      service: mongodb
+
+  migration:
+    extends:
+      file: ./docker/services/migration.yml
+      service: migration
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
