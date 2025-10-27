@@ -2,10 +2,7 @@
 """
 migration_crud.py
 
-Script d'assistance pour effectuer des opérations CRUD (Create, Read, Update, Delete)
-sur une collection MongoDB. Conçu pour fonctionner avec une instance locale ou
-avec MongoDB Atlas et compatible avec MongoDB Compass (les opérations sont standard
-pymongo).
+Outil de migration pour MongoDB.
 
 Fonctionnalités principales :
 - import_csv : lire un CSV, convertir les types (Age -> int, Date of Admission -> datetime)
@@ -24,7 +21,6 @@ Par défaut : uri = 'mongodb://localhost:27017', db = 'FirstTry', collection = '
 """
 
 from __future__ import annotations
-
 import argparse
 from typing import Any, Dict, List, Optional
 from pathlib import Path
@@ -32,9 +28,9 @@ import pandas as pd
 import pymongo
 from pymongo import MongoClient
 from bson import json_util, ObjectId
-from datetime import datetime
 
 
+# === CONFIGURATION PAR DÉFAUT ===
 DEFAULT_URI = "mongodb://localhost:27017"
 DEFAULT_DB = "FirstTry"
 DEFAULT_COLLECTION = "mediccrud"
@@ -72,9 +68,7 @@ def _to_datetime(value: Any) -> Optional[datetime]:
 
     try:
         ts = pd.to_datetime(value, errors="coerce", dayfirst=False)
-        if pd.isna(ts):
-            return None
-        return ts.to_pydatetime()
+        return None if pd.isna(ts) else ts.to_pydatetime()
     except Exception:
         return None
 
@@ -97,7 +91,6 @@ def convert_dataframe_types(df: pd.DataFrame) -> List[Dict[str, Any]]:
             if pd.isna(v):
                 doc[k] = None
                 continue
-
             if k == "Age":
                 doc[k] = _safe_int(v)
             elif k == "Date of Admission":
@@ -152,6 +145,7 @@ def import_csv(uri: str, db: str, collection: str, file: str, batch_size: int = 
 
 # === CRUD OPERATIONS ===
 
+# === OPÉRATIONS CRUD ===
 def find(uri: str, db: str, collection: str, filter_json: Optional[str], limit: int = 20):
     coll = get_collection(uri, db, collection)
     filt = {}
@@ -196,7 +190,6 @@ def insert_one(uri: str, db: str, collection: str, doc_json: str):
         doc["Age"] = _safe_int(doc.get("Age"))
     if "Date of Admission" in doc:
         doc["Date of Admission"] = _to_datetime(doc.get("Date of Admission"))
-
     res = coll.insert_one(doc)
     print(f"✅ Document inséré avec _id = {res.inserted_id}")
 
@@ -212,9 +205,8 @@ def update_one(uri: str, db: str, collection: str, filter_json: str, update_json
 
     if not any(k.startswith("$") for k in update_doc.keys()):
         update_doc = {"$set": update_doc}
-
     res = coll.update_one(filt, update_doc, upsert=upsert)
-    print(f"Matched: {res.matched_count}, Modified: {res.modified_count}, UpsertedId: {res.upserted_id}")
+    print(f"🔄 Matched: {res.matched_count}, Modified: {res.modified_count}, UpsertedId: {res.upserted_id}")
 
 
 def delete_one(uri: str, db: str, collection: str, filter_json: str):
@@ -231,6 +223,7 @@ def delete_one(uri: str, db: str, collection: str, filter_json: str):
 
 # === CLI (argparse) ===
 
+# === ARGUMENTS CLI ===
 def parse_args():
     parser = argparse.ArgumentParser(description="Migration CRUD helper pour MongoDB")
     parser.add_argument("--uri", default=DEFAULT_URI)

@@ -1,216 +1,205 @@
-# 🧬 Migration d'une base médicale sur  MongoDB
+# 🧬 Migration d'une base médicale vers MongoDB
 
-Ce dépôt GitHub contient des scripts Python pour **préparer, nettoyer, migrer et analyser** un jeu de données médicales dans MongoDB.  
-Il est hébergé sur :  
-👉 **[https://github.com/PascalDuval/migration-mongodb](https://github.com/PascalDuval/migration-mongodb)**
+Ce dépôt contient un ensemble de scripts Python pour **nettoyer**, **préparer**, **migrer** et **analyser** un jeu de données médicales dans MongoDB. Il constitue un support pédagogique complet pour comprendre toutes les étapes d'une migration de données depuis un fichier CSV vers une collection MongoDB.
+
+> 📦 Dépôt public : [https://github.com/PascalDuval/migration-mongodb](https://github.com/PascalDuval/migration-mongodb)
 
 ---
 
-## 🚀 Cloner le projet
+## 📚 Sommaire
 
-Ouvrez un terminal PowerShell (Windows) ou bash (Linux/macOS) et exécutez :
+1. [Objectifs du projet](#-objectifs-du-projet)
+2. [Contenu du dépôt](#-contenu-du-dépôt)
+3. [Prérequis techniques](#-prérequis-techniques)
+4. [Mise en place de l'environnement](#-mise-en-place-de-lenvironnement)
+5. [Jeux de données fournis](#-jeux-de-données-fournis)
+6. [Scripts disponibles](#-scripts-disponibles)
+7. [Organisation de la base MongoDB](#-organisation-de-la-base-mongodb)
+8. [Utilisation détaillée](#-utilisation-détaillée)
+9. [Tests automatiques](#-tests-automatiques)
+10. [FAQ & dépannage](#-faq--dépannage)
+11. [Contribution & support](#-contribution--support)
+12. [Licence](#-licence)
+
+---
+
+## 🎯 Objectifs du projet
+
+* Illustrer la migration d'un jeu de données médicales vers MongoDB en respectant les bonnes pratiques.
+* Montrer comment fiabiliser les types de données (dates, nombres, montants, etc.).
+* Proposer un ensemble de scripts CRUD d'analyse pour vérifier la qualité des données une fois migrées.
+* Fournir une base de tests (unitaires et d'intégration) permettant de valider la chaîne de migration.
+
+---
+
+## 🗂️ Contenu du dépôt
+
+migration-mongodb/
+├── data/ # Jeux de données bruts et nettoyés
+├── scripts/ # Scripts de migration, nettoyage et analyses CRUD
+├── tests/ # Suite de tests pytest (unitaires + intégration)
+├── Dockerfile # Image de développement/exécution optionnelle
+├── requirements.txt # Dépendances nécessaires à l'exécution des scripts
+├── requirements-tests.txt # Dépendances supplémentaires pour la suite de tests
+└── README.md # Ce fichier
+
+yaml
+Copier le code
+
+### Dossiers principaux
+
+| Dossier | Description |
+| ------- | ----------- |
+| `scripts/` | Contient l'ensemble des scripts Python : migration, nettoyage, contrôles d'intégrité, analyses CRUD. |
+| `data/` | Fichiers CSV (original + version purgée). |
+| `tests/` | Tests automatisés basés sur `pytest`, `mongomock` et `pytest-mock`. |
+
+---
+
+## 🧰 Prérequis techniques
+
+| Outil | Version recommandée | Notes |
+| ----- | ------------------- | ----- |
+| Python | 3.10 ou supérieur | Utilisé pour tous les scripts et tests. |
+| MongoDB | 6.x (local ou Atlas) | Une instance locale suffit pour les tests manuels. |
+| pip | Version la plus récente | Gestionnaire de paquets Python. |
+| Git | Optionnel | Pour cloner et versionner le projet. |
+
+---
+
+## ⚙️ Mise en place de l'environnement
+
+### 1. Cloner le dépôt
 
 ```bash
 git clone https://github.com/PascalDuval/migration-mongodb.git
 cd migration-mongodb
-````
-
-Cela créera un dossier local `migration-mongodb/` contenant tous les scripts, données et tests du projet.
-
----
-
-## 📁 Structure
-
-* **`scripts/`** : scripts Python de migration, vérification et analyses CRUD.
-  (ex. `migration_crud.py`, `check_doublons.py`, `TopHospitalCrud.py`, etc.)
-* **`data/`** : jeux de données (`healthcare_dataset.csv`, `healthcare_dataset_purge.csv`).
-* **`tests/`** : tests unitaires et d’intégration pour valider le bon fonctionnement du projet.
-
----
-
-## 🧩 Organisation de la collection MongoDB
-
-### Schéma de la collection `FirstTry.mediccrud`
-
-| Type    | Champs principaux                                                                                                                               |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chaînes | `Name`, `Medical Condition`, `Medication`, `Doctor`, `Hospital`, `Insurance Provider`, `Gender`, `Blood Type`, `Admission Type`, `Test Results` |
-| Nombres | `Age`, `Billing Amount`, `Room Number`                                                                                                          |
-| Dates   | `Date of Admission`, `Discharge Date`                                                                                                           |
-| ID      | `_id` (`ObjectId` automatique)                                                                                                                  |
-
----
-
-## ⚙️ Installation et environnement
-
-### Prérequis
-
-* **Python 3.10+**
-* **MongoDB** (local ou Atlas)
-* **pip** installé
-
-### Installation recommandée (Windows PowerShell)
-
-```powershell
+2. Créer et activer un environnement virtuel (Windows PowerShell)
+powershell
+Copier le code
 python -m venv .venv
 Set-ExecutionPolicy RemoteSigned -Scope Process -Force
 .\.venv\Scripts\Activate.ps1
+Linux / macOS
+
+bash
+Copier le code
+python -m venv .venv
+source .venv/bin/activate
+3. Installer les dépendances
+bash
+Copier le code
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
+Pour exécuter également les tests automatisés :
 
-> Principales dépendances : `pymongo`, `pandas`
+bash
+Copier le code
+python -m pip install -r requirements-tests.txt
+4. Configurer MongoDB (optionnel mais recommandé)
+Installez MongoDB Community Server ou créez un cluster Atlas.
 
----
+Créez une base FirstTry et une collection mediccrud (elles seront créées automatiquement lors de l'import si elles n'existent pas).
 
-## 🧾 Script principal : `scripts/migration_crud.py`
+Assurez-vous d'avoir un utilisateur avec droits de lecture/écriture si vous utilisez Atlas.
 
-Ce script gère la **migration complète** du CSV nettoyé vers MongoDB.
+🧾 Jeux de données fournis
+Fichier	Description
+data/healthcare_dataset.csv	Fichier source brut (peut contenir des doublons ou incohérences).
+data/healthcare_dataset_purge.csv	Version nettoyée, prête pour la migration.
 
+Le script scripts/check_doublons.py permet de détecter les doublons et de produire la version purgée.
 
-### Fonctionnalités principales
+🛠️ Scripts disponibles
+Migration & préparation
+Script	Rôle principal	Commandes clés
+migration_crud.py	Migration et opérations CRUD sur la collection	import_csv, create_indexes, find, insert, update, delete, --dry
+check_doublons.py	Détection et suppression des doublons dans le CSV	Génère healthcare_dataset_purge.csv
+check_integrity.py	Vérifications basiques d'intégrité des données	Contrôle des colonnes essentielles
 
-* Import CSV → MongoDB (`import_csv`)
-* Conversion automatique :
+Analyses CRUD
+Script	Description
+TopHospitalCrud.py	Classement des hôpitaux par nombre de patients.
+AgeByDeseaseCrud.py	Analyse de l'âge moyen par pathologie.
+MedicationByCancerAndResultsCrud.py	Regroupe les patients par médicament, cancer et résultat des tests.
+TopInsuranceCrud.py	Exemple supplémentaire d'analyse des assurances (à adapter selon vos besoins).
 
-  * `Age` → entier
-  * `Date of Admission` / `Discharge Date` → `datetime`
-  * `Billing Amount` → float
-* Création d’index
-* Commandes CRUD (find, insert, update, delete)
-* Mode `--dry` (voir ci-dessous)
+ℹ️ Tous les scripts prennent en charge les variables d'environnement MONGO_URI, MONGO_DB et MONGO_COLLECTION pour configurer la connexion.
 
----
+🗃️ Organisation de la base MongoDB
+Collection principale : FirstTry.mediccrud
+Type	Champs principaux
+Chaînes	Name, Medical Condition, Medication, Doctor, Hospital, Insurance Provider, Gender, Blood Type, Admission Type, Test Results
+Nombres	Age, Billing Amount, Room Number
+Dates	Date of Admission, Discharge Date
+ID	_id (ObjectId généré automatiquement)
 
-## 🧪 Le mode `--dry` (dry-run)
+Index recommandés
+Le script migration_crud.py create_indexes crée des index pour accélérer les recherches :
 
-Le mode `--dry` permet de **tester la migration sans rien insérer dans MongoDB**.
-Les données sont lues, converties et affichées, mais **aucun `insert` n’est effectué**.
+Index composé sur ("Medical Condition", "Hospital")
 
-### Exemple :
+Index simple sur "Name"
 
-```powershell
+Index simple sur "Insurance Provider"
+
+▶️ Utilisation détaillée
+1. Nettoyer et préparer les données
+bash
+Copier le code
+python scripts/check_doublons.py
+python scripts/check_integrity.py
+Ces scripts génèrent la version nettoyée du CSV et valident les colonnes critiques.
+
+2. Simuler la migration (mode dry-run)
+bash
+Copier le code
 python scripts/migration_crud.py import_csv --dry
-```
+Lecture du CSV nettoyé (healthcare_dataset_purge.csv).
 
-👉 Le script charge le CSV, effectue toutes les conversions de type,
-et affiche un extrait des données converties sans modifier la base.
+Conversion des types (Age → int, Billing Amount → float, dates → datetime).
 
-Ce mode est **idéal pour valider les conversions** avant une migration réelle.
+Affichage d'un échantillon de documents sans insertion dans MongoDB.
 
----
+3. Importer réellement les données
+bash
+Copier le code
+python scripts/migration_crud.py import_csv
+4. Créer les index
+bash
+Copier le code
+python scripts/migration_crud.py create_indexes
+5. Lancer des analyses CRUD
+bash
+Copier le code
+python scripts/TopHospitalCrud.py
+python scripts/AgeByDeseaseCrud.py
+python scripts/MedicationByCancerAndResultsCrud.py
+Adaptez les scripts d'analyse à vos propres besoins pour explorer les données.
 
-## 🔍 Les conversions de types
+✅ Tests automatiques
+La suite de tests se trouve dans le dossier tests/ et se base sur pytest + mongomock pour simuler MongoDB.
 
-Le script utilise des fonctions internes pour fiabiliser les types :
-
-| Fonction         | Rôle                                          | Exemple                                  |
-| ---------------- | --------------------------------------------- | ---------------------------------------- |
-| `_safe_int()`    | Convertit une valeur en entier si possible    | `"42"` → `42`, `"abc"` → `None`          |
-| `_to_datetime()` | Transforme une date texte en objet `datetime` | `"2024-01-10"` → `datetime(2024, 1, 10)` |
-| `_safe_float()`  | Convertit une chaîne en float sécurisé        | `"10.5"` → `10.5`, `"n/a"` → `None`      |
-
-Ces fonctions évitent que le script plante si le CSV contient des valeurs non conformes.
-
----
-
-## ✅ Tests unitaires et d’intégration (`tests/`)
-
-Une suite de tests pytest a été ajoutée pour vérifier que `migration_crud.py` fonctionne correctement.
-
-### 📁 Fichier principal :
-
-`scripts/tests/test_migration_crud.py`
-
-### 🔧 Technologies utilisées :
-
-* **pytest** → moteur de test Python
-* **mongomock** → simule MongoDB sans serveur réel
-* **pytest-mock** → gestion des mocks automatiques
-
-### 🧩 Ce que les tests valident :
-
-| Type de test             | Fonction testée                                        | Objectif                                        |
-| ------------------------ | ------------------------------------------------------ | ----------------------------------------------- |
-| **Unitaires**            | `_safe_int`, `_to_datetime`, `convert_dataframe_types` | Vérifient les conversions de type               |
-| **CRUD simulé**          | `insert_one`, `find`, `update_one`, `delete_one`       | Vérifient les opérations CRUD sur base mockée   |
-| **Indexation**           | `create_indexes`                                       | Vérifie la création des index                   |
-| **Import CSV (dry-run)** | `import_csv`                                           | Vérifie la lecture et conversion sans insertion |
-
----
-
-### 🧠 Explication : qu’est-ce qu’un `assert` ?
-
-Un **`assert`** est une instruction de test :
-elle vérifie qu’une condition est vraie.
-Si elle ne l’est pas, le test échoue immédiatement.
-
-Exemples :
-
-```python
-assert 1 + 1 == 2         # ✅ Passe
-assert "Alice" in ["Bob"] # ❌ Échec
-```
-
-Dans nos tests :
-
-```python
-assert isinstance(records[0]["Age"], int)
-```
-
-➡️ Vérifie que le champ `Age` est bien un entier après conversion.
-
----
-
-## 🧰 Lancer les tests
-
-Depuis la racine du projet :
-
-```bash
-# Installer les dépendances de test
-pip install pytest mongomock pytest-mock pandas
-
-# Lancer les tests
+Installation des dépendances de test
+bash
+Copier le code
+python -m pip install -r requirements-tests.txt
+Exécution des tests
+bash
+Copier le code
 pytest -v
-```
+Contenu des tests
+Type	Fichiers	Objectif
+Unitaires	tests/test_migration_crud.py	Vérifie les fonctions internes (_safe_int, _to_datetime, convert_dataframe_types, etc.).
+Intégration simulée	tests/test_migration_crud.py	Teste l'ensemble des opérations CRUD avec mongomock.
 
-### Exemple de sortie attendue :
+Tests sur une vraie base (optionnel)
+Créez tests/test_integration_real.py pour valider la connexion à une instance réelle :
 
-```
-==================== test session starts ====================
-collected 9 items
-
-tests/test_migration_crud.py .........                        [100%]
-
-==================== 9 passed in 2.3s ========================
-```
-
----
-
-## 🔄 Quand exécuter les tests ?
-
-🧪 Les tests doivent être exécutés **avant toute migration réelle**,
-afin de s’assurer que :
-
-* les conversions sont correctes,
-* le CSV est bien lu,
-* les index sont valides,
-* et les opérations CRUD fonctionnent.
-
-👉 Cela constitue une **phase de validation pré-migration**.
-
----
-
-## 🧩 Tests d’intégration réels (optionnels)
-
-En complément des tests mockés, il est possible de **tester sur une vraie base MongoDB locale**
-(`mongodb://localhost:27017`).
-
-Crée un fichier `tests/test_integration_real.py` contenant :
-
-```python
+python
+Copier le code
 from pymongo import MongoClient
-import migration_crud as mc
+import scripts.migration_crud as mc
 
 def test_real_connection():
     client = MongoClient("mongodb://localhost:27017")
@@ -218,82 +207,43 @@ def test_real_connection():
     coll = db["mediccrud"]
     assert coll is not None
     assert isinstance(coll.count_documents({}), int)
-```
+Puis exécutez :
 
-Puis exécute :
-
-```bash
+bash
+Copier le code
 pytest -v tests/test_integration_real.py
-```
+🆘 FAQ & Dépannage
+<details> <summary>🚫 "Connection refused" lors de la connexion à MongoDB</summary>
+Vérifiez que le service MongoDB est démarré (mongod).
 
+Si vous utilisez MongoDB Atlas, assurez-vous que votre IP est autorisée dans le réseau.
 
----
+Vérifiez la variable d'environnement MONGO_URI.
 
-## 📈  Résumé des étapes
+</details> <details> <summary>📄 Quel CSV est utilisé par défaut ?</summary>
+Le script migration_crud.py utilise data/healthcare_dataset_purge.csv. Vous pouvez changer ce comportement en modifiant la constante DEFAULT_DATA_FILE dans le script.
 
-1. Cloner le dépôt :
+</details> <details> <summary>🗓️ Mes dates ne sont pas converties correctement</summary>
+Utilisez le mode --dry pour inspecter les conversions. Les dates doivent être au format ISO (YYYY-MM-DD) ou un format reconnu par pandas.to_datetime.
 
-   ```bash
-   git clone https://github.com/PascalDuval/migration-mongodb.git
-   cd migration-mongodb
-   ```
+</details> <details> <summary>🧪 Comment ajouter un nouveau test ?</summary>
+Créez un nouveau fichier dans tests/ (ex. test_top_hospital.py) et utilisez mongomock pour simuler la collection. Inspirez-vous de tests/test_migration_crud.py.
 
-2. Créer et activer un environnement virtuel :
+</details>
+🤝 Contribution & support
+Forkez le dépôt.
 
-   ```bash
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   ```
+Créez une branche dédiée : git checkout -b feature/ma-fonctionnalite.
 
-3. Installer les dépendances :
+Faites vos modifications et ajoutez des tests lorsque c'est pertinent.
 
-   ```bash
-   python -m pip install -r requirements.txt
-   ```
+Lancez pytest -v avant de soumettre votre Pull Request`.
 
-4. Nettoyer les données :
+Soumettez une PR descriptive.
 
-   ```bash
-   python scripts/check_doublons.py
-   ```
+Pour toute question : ouvrez une issue.
 
-5. Vérifier l’intégrité :
+📜 Licence
+Ce projet est distribué sous la licence MIT.
 
-   ```bash
-   python scripts/check_integrity.py
-   ```
-
-6. **Exécuter les tests unitaires et d’intégration :**
-
-   ```bash
-   pytest -v
-   ```
-
-7. Si tout est vert ✅ :
-
-   ```bash
-   python scripts/migration_crud.py import_csv
-   ```
-
-8. Créer les index :
-
-   ```bash
-   python scripts/migration_crud.py create_indexes
-   ```
-
-9. Lancer les analyses CRUD afinb de vérifier que tout marche bien:
-
-   ```bash
-   python scripts/TopHospitalCrud.py
-   python scripts/AgeByDeseaseCrud.py
-   python scripts/MedicationByCancerAndResultsCrud.py
-   etc...
-   ```
-
----
-
-## 💬 Support
-
-Pour toute question ou suggestion :
-👉 [Ouvrez une issue sur GitHub](https://github.com/PascalDuval/migration-mongodb/issues)
-
+Bon apprentissage et bonne migration ! 🚀
