@@ -18,6 +18,9 @@ from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
 
 # 🔧 Import du module CRUD (adapter selon ton arborescence)
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 from functions_crud.crud_ops import DEFAULT_DB, DEFAULT_URI, get_collection
 
 
