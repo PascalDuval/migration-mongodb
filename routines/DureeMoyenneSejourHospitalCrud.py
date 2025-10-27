@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Durée moyenne des séjours hospitaliers (lecture CRUD).
+Durée moyenne des séjours hospitaliers.
 Ce script lit les documents contenant "Date of Admission" et "Discharge Date"
 dans une collection MongoDB, calcule la durée du séjour en jours côté Python,
 et affiche un résumé statistique simple.

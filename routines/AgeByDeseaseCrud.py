@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-"""
-AverageAgeByConditionCrud.py
-
-Analyse CRUD (lecture simple) :
-Calcule l’âge moyen (arrondi) des patients par pathologie
-dans la base MongoDB.
-
-✅ 100 % Python (pas de pipeline MongoDB)
-✅ Lecture CRUD simple
-✅ Résultats affichés sous forme de tableau (avec Pandas si disponible)
-
-Usage :
-  python scripts/AverageAgeByConditionCrud.py
-  python scripts/AverageAgeByConditionCrud.py --db FirstTry --collection mediccrud
-"""
 
 import argparse
 from collections import defaultdict

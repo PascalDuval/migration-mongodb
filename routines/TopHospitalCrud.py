@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-TopHospitalCrud.py
 
-Analyse CRUD (lecture simple) :
-Affiche l’hôpital avec le plus grand nombre d’admissions.
-
-✅ 100 % Python (pas de pipeline MongoDB)
-✅ Lecture CRUD simple
-✅ Sortie claire avec le top 1
-"""
 
 import argparse
 from collections import Counter

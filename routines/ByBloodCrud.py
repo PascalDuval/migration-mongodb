@@ -1,21 +1,4 @@
 #!/usr/bin/env python3
-"""
-BloodTypeDistributionCrud.py
-
-Analyse la répartition des groupes sanguins dans la collection MongoDB
-(lecture CRUD, agrégation côté serveur).
-
-Pour chaque groupe sanguin :
-  - Compte le nombre total de patients
-  - Calcule le pourcentage du total
-
-Affiche les résultats sous forme de tableau formaté (avec Pandas si disponible).
-
-Usage :
-  python scripts/BloodTypeDistributionCrud.py
-  ou
-  python scripts/BloodTypeDistributionCrud.py --db FirstTry --collection medic2
-"""
 
 import argparse
 from pymongo.errors import PyMongoError

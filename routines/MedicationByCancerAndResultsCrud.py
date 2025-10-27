@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""
-MedicationByCancerAndResultsCrud.py
 
-Calcule, en mode CRUD (lecture via find), pour chaque médicament utilisé par des patients
-ayant une pathologie contenant 'Cancer' :
-- nombre total de tests
-- pourcentage de résultats 'Abnormal', 'Inconclusive', 'Normal'
-
-Le script illustre comment reproduire une agrégation MongoDB côté application (Python)
-lorsque l'on préfère ou doit faire du traitement en mémoire.
-
-Usage :
-  python scripts/MedicationByCancerAndResultsCrud.py
-
-"""
 from pymongo import MongoClient
 from collections import defaultdict, Counter
  

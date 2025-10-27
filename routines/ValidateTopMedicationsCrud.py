@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-TopMedicationsByCancerCrud.py
 
-Analyse CRUD (lecture simple) :
-Liste les médicaments les plus prescrits aux patients atteints d’un cancer.
-
-✅ 100 % Python (pas de pipeline MongoDB)
-✅ Lecture CRUD simple avec get_collection()
-✅ Option --top pour limiter le nombre de résultats
-"""
 
 import argparse
 from collections import Counter
