@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+
+  migration:
+    build:
+      context: .
+    depends_on:
+      - mongodb
+    volumes:
+      - ./data:/app/data
+    entrypoint: >
+      python migration_crud.py import_csv
+      --file data/healthcare_dataset_purge.csv
+      --uri mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
+      --db ${MONGO_DB}
+      --collection mediccrud
+
+volumes:
+  mongo_data:

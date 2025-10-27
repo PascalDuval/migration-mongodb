@@ -1,0 +1,20 @@
+services/migration.yml
+Nouveau
++15
+-0
+
+services:
+  migration:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.migration
+    image: migration-mongodb-runner:latest
+    env_file:
+      - ../env/migration.env
+    working_dir: /app
+    volumes:
+      - ../data:/app/data:ro
+      - ../scripts:/app/scripts:ro
+    entrypoint: ["python", "scripts/migration_crud.py"]
+    command: ["--help"]
+    tty: true

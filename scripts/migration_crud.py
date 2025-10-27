@@ -7,14 +7,15 @@ Outil de migration pour MongoDB.
 Fonctionnalités principales :
 - import_csv : lire un CSV, convertir les types (Age -> int, Date of Admission -> datetime)
   puis insérer dans la collection (insert_many).
-- find / find_one : requêtes de lecture avec filtres JSON.
-- insert_one : insérer un document depuis une chaîne JSON.
-- update_one : mise à jour (supporte `$set`) depuis filtres et document JSON.
-- delete_one : suppression selon filtre JSON.
+- find / find_one : requêtes de lecture avec filtres JSON
+- insert_one : insérer un document depuis une chaîne JSON
+- update_one : mise à jour (supporte `$set`) depuis filtres et document JSON
+- delete_one : suppression selon filtre JSON
 
 Usage (exemples) :
   python scripts/migration_crud.py import_csv --file ../data/healthcare_dataset_purge.csv
   python scripts/migration_crud.py find --filter '{"Name": "John Doe"}'
+  python scripts/migration_crud.py update_one '{"Name":"John"}' '{"$set":{"Age":40}}'
 
 Par défaut : uri = 'mongodb://localhost:27017', db = 'FirstTry', collection = 'mediccrud'
 """
@@ -23,7 +24,6 @@ from __future__ import annotations
 import argparse
 from typing import Any, Dict, List, Optional
 from pathlib import Path
-from datetime import datetime
 import pandas as pd
 import pymongo
 from pymongo import MongoClient
@@ -36,14 +36,14 @@ DEFAULT_DB = "FirstTry"
 DEFAULT_COLLECTION = "mediccrud"
 
 
-# === CONNEXION MONGODB ===
+# === Connexion à MongoDB ===
 def get_collection(uri: str, db_name: str, coll_name: str):
     client = MongoClient(uri)
     db = client[db_name]
     return db[coll_name]
 
 
-# === CONVERSIONS DE TYPES ===
+# === Fonctions utilitaires ===
 def _safe_int(value: Any) -> Optional[int]:
     try:
         if pd.isna(value):
@@ -57,10 +57,12 @@ def _to_datetime(value: Any) -> Optional[datetime]:
     """Convertit différentes représentations en datetime Python ou renvoie None."""
     if value is None:
         return None
-
     try:
-        if isinstance(value, pd.Timestamp):
-            return None if pd.isna(value) else value.to_pydatetime()
+        import pandas as _pd
+        if isinstance(value, _pd.Timestamp):
+            if pd.isna(value):
+                return None
+            return value.to_pydatetime()
     except Exception:
         pass
 
@@ -71,6 +73,7 @@ def _to_datetime(value: Any) -> Optional[datetime]:
         return None
 
 
+# === Conversion CSV → documents Mongo ===
 def convert_dataframe_types(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """Convertit les colonnes connues en types appropriés et retourne une liste de dicts."""
     df2 = df.copy()
@@ -102,6 +105,7 @@ def convert_dataframe_types(df: pd.DataFrame) -> List[Dict[str, Any]]:
 def import_csv(uri: str, db: str, collection: str, file: str, batch_size: int = 1000, dry_run: bool = False):
     coll = get_collection(uri, db, collection)
 
+    # Recherche du fichier CSV
     candidates = [
         Path(file),
         Path(__file__).parent.joinpath(file),
@@ -112,39 +116,47 @@ def import_csv(uri: str, db: str, collection: str, file: str, batch_size: int = 
 
     path = next((c for c in candidates if c.exists()), None)
     if path is None:
-        print("❌ Fichier introuvable (aucun des chemins suivants n'existe) :")
-        for c in candidates:
-            print(" -", str(c))
+        print("❌ Fichier introuvable. Vérifiez le chemin.")
         return
 
     df = pd.read_csv(path)
-    print(f"✅ Fichier chargé : {path} ({len(df)} lignes)")
+    print(f"📄 Fichier chargé : {path} ({len(df)} lignes)")
+
     records = convert_dataframe_types(df)
 
     if dry_run:
-        print(f"🔍 Mode dry-run : {len(records)} documents préparés (aucune insertion)")
-        print("Exemples de documents convertis (5 premiers) :")
+        print(f"Mode dry-run activé : {len(records)} documents préparés (aucune insertion).")
+        print("Exemples de documents convertis :")
         print(json_util.dumps(records[:5], indent=2, default=str))
         return
 
     inserted = 0
     for i in range(0, len(records), batch_size):
-        batch = records[i:i + batch_size]
+        batch = records[i:i+batch_size]
         try:
             res = coll.insert_many(batch, ordered=False)
             inserted += len(res.inserted_ids)
-            print(f"📥 Insertion batch : {len(res.inserted_ids)} (total {inserted})")
+            print(f"✅ Insertion batch {i//batch_size+1}: {len(res.inserted_ids)} documents insérés (total {inserted})")
         except Exception as e:
-            print(f"⚠️ Erreur lors de l'insertion (batch {i}): {e}")
+            print(f"⚠️ Erreur d’insertion au batch {i}: {e}")
 
-    print(f"🎯 Import terminé : {inserted} documents insérés dans {db}.{collection}")
+    print(f"🎯 Import terminé. {inserted} documents insérés dans {db}.{collection}")
 
+
+# === CRUD OPERATIONS ===
 
 # === OPÉRATIONS CRUD ===
 def find(uri: str, db: str, collection: str, filter_json: Optional[str], limit: int = 20):
     coll = get_collection(uri, db, collection)
-    filt = json_util.loads(filter_json) if filter_json else {}
-    docs = list(coll.find(filt).limit(limit))
+    filt = {}
+    if filter_json:
+        try:
+            filt = json_util.loads(filter_json)
+        except Exception as e:
+            print(f"⚠️ Filtre JSON invalide : {e}")
+            return
+    cursor = coll.find(filt).limit(limit)
+    docs = list(cursor)
     print(json_util.dumps(docs, indent=2, default=str))
 
 
@@ -163,24 +175,34 @@ def find_one(uri: str, db: str, collection: str, id_or_filter: str):
         doc = coll.find_one(filt)
         print(json_util.dumps(doc, indent=2, default=str))
     except Exception as e:
-        print(f"⚠️ Erreur parsing JSON : {e}")
+        print(f"⚠️ Erreur filtre JSON : {e}")
 
 
 def insert_one(uri: str, db: str, collection: str, doc_json: str):
     coll = get_collection(uri, db, collection)
-    doc = json_util.loads(doc_json)
+    try:
+        doc = json_util.loads(doc_json)
+    except Exception as e:
+        print(f"⚠️ Document JSON invalide : {e}")
+        return
+
     if "Age" in doc:
         doc["Age"] = _safe_int(doc.get("Age"))
     if "Date of Admission" in doc:
         doc["Date of Admission"] = _to_datetime(doc.get("Date of Admission"))
     res = coll.insert_one(doc)
-    print(f"✅ Document inséré (_id={res.inserted_id})")
+    print(f"✅ Document inséré avec _id = {res.inserted_id}")
 
 
 def update_one(uri: str, db: str, collection: str, filter_json: str, update_json: str, upsert: bool = False):
     coll = get_collection(uri, db, collection)
-    filt = json_util.loads(filter_json)
-    update_doc = json_util.loads(update_json)
+    try:
+        filt = json_util.loads(filter_json)
+        update_doc = json_util.loads(update_json)
+    except Exception as e:
+        print(f"⚠️ Erreur parsing JSON : {e}")
+        return
+
     if not any(k.startswith("$") for k in update_doc.keys()):
         update_doc = {"$set": update_doc}
     res = coll.update_one(filt, update_doc, upsert=upsert)
@@ -189,17 +211,24 @@ def update_one(uri: str, db: str, collection: str, filter_json: str, update_json
 
 def delete_one(uri: str, db: str, collection: str, filter_json: str):
     coll = get_collection(uri, db, collection)
-    filt = json_util.loads(filter_json)
+    try:
+        filt = json_util.loads(filter_json)
+    except Exception as e:
+        print(f"⚠️ Erreur parsing JSON : {e}")
+        return
+
     res = coll.delete_one(filt)
     print(f"🗑️ Documents supprimés : {res.deleted_count}")
 
 
+# === CLI (argparse) ===
+
 # === ARGUMENTS CLI ===
 def parse_args():
-    parser = argparse.ArgumentParser(description="Migration CRUD simplifiée pour MongoDB")
-    parser.add_argument("--uri", default=DEFAULT_URI, help="URI MongoDB (défaut localhost)")
-    parser.add_argument("--db", default=DEFAULT_DB, help="Nom de la base (défaut FirstTry)")
-    parser.add_argument("--collection", default=DEFAULT_COLLECTION, help="Nom de la collection (défaut mediccrud)")
+    parser = argparse.ArgumentParser(description="Migration CRUD helper pour MongoDB")
+    parser.add_argument("--uri", default=DEFAULT_URI)
+    parser.add_argument("--db", default=DEFAULT_DB)
+    parser.add_argument("--collection", default=DEFAULT_COLLECTION)
 
     sub = parser.add_subparsers(dest="cmd")
 
@@ -229,11 +258,13 @@ def parse_args():
     return parser.parse_args()
 
 
-# === POINT D’ENTRÉE ===
+# === Main ===
+
 def main():
     args = parse_args()
+
     if args.cmd == "import_csv":
-        import_csv(args.uri, args.db, args.collection, args.file, batch_size=args.batch, dry_run=getattr(args, 'dry', False))
+        import_csv(args.uri, args.db, args.collection, args.file, batch_size=args.batch, dry_run=args.dry)
     elif args.cmd == "find":
         find(args.uri, args.db, args.collection, args.filter, limit=args.limit)
     elif args.cmd == "find_one":
@@ -245,7 +276,7 @@ def main():
     elif args.cmd == "delete_one":
         delete_one(args.uri, args.db, args.collection, args.filter_json)
     else:
-        print("❓ Aucune commande fournie. Utilisez --help pour voir les options.")
+        print("⚠️ Aucune commande fournie. Utilisez --help pour voir les options disponibles.")
 
 
 if __name__ == "__main__":
