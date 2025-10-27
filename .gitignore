@@ -6,4 +6,5 @@ divers/
 */__init__/
 __init__.py
 docker/
+simpledocker/
 docker/*
