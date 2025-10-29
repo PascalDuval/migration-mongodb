@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   mongodb:
     image: mongo:6
@@ -13,23 +11,68 @@ services:
     volumes:
       - mongo_data:/data/db
       - ./mongo-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "mongosh -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --quiet --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  init-users:
+    image: mongo:6
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_DB: ${MONGO_DB}
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+        cat > /tmp/init-users.js <<'JS'
+        const dbName = process.env.MONGO_DB || 'FirstTry';
+        function ensureUser(u, p, r) {
+          const target = db.getSiblingDB(dbName);
+          if (!target.getUser(u)) {
+            target.createUser({ user: u, pwd: p, roles: r });
+            print('created ' + u);
+          } else {
+            print('exists ' + u);
+          }
+        }
+        ensureUser('appuser', 'apppass', [{ role: 'readWrite', db: dbName }]);
+        ensureUser('readonly', 'readonly123', [{ role: 'read', db: dbName }]);
+        ensureUser('dbowner', 'dbowner123', [{ role: 'dbOwner', db: dbName }]);
+        JS
+        mongosh -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --host mongodb --quiet /tmp/init-users.js
+    restart: "no"
 
   migration:
     build:
       context: .
     depends_on:
-      - mongodb
+      init-users:
+        condition: service_completed_successfully
     environment:
       MONGO_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
     volumes:
       - ./data:/app/data
       - ./routines:/app/routines
-    entrypoint: >
-      python migration_crud.py import_csv
-      --file data/healthcare_dataset_purge.csv
-      --uri mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
-      --db ${MONGO_DB}
-      --collection mediccrud
+    command:
+      - python
+      - migration_crud.py
+      - --uri
+      - mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
+      - --db
+      - ${MONGO_DB}
+      - --collection
+      - mediccrud
+      - import_csv
+      - --file
+      - data/healthcare_dataset_purge.csv
 
 volumes:
   mongo_data:

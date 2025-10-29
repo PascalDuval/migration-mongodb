@@ -279,21 +279,14 @@ docker compose run --rm migration python migration_crud.py find --limit 3
 
 ```bash
 docker compose run --rm migration python routines/MedicationByCancerAndResults.py
-docker compose run --rm migration python routines/PatientsByCity.py
-docker compose run --rm migration python routines/ResultsByAgeGroup.py
+docker compose run --rm migration python routines/ValidateTopMedications.py
+docker compose run --rm migration python routines/TopHospital.py
 ```
 
 ---
 
-## 🧪 10. Lancer la démo CRUD complète
 
-```bash
-docker compose run --rm migration python demo_crud_flow.py
-```
-
----
-
-## 🧹 11. Nettoyer
+## 🧹 10. Nettoyer
 
 ### Supprimer les conteneurs + volumes :
 
