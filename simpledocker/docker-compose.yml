@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   mongodb:
@@ -19,8 +19,11 @@ services:
       context: .
     depends_on:
       - mongodb
+    environment:
+      MONGO_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
     volumes:
       - ./data:/app/data
+      - ./routines:/app/routines
     entrypoint: >
       python migration_crud.py import_csv
       --file data/healthcare_dataset_purge.csv
