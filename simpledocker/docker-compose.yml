@@ -1,9 +1,6 @@
-version: '3.9'
-
 services:
   mongodb:
     image: mongo:6
-    container_name: mongo
     restart: always
     ports:
       - "27017:27017"
@@ -12,21 +9,61 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
-      - ./mongo-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "mongosh -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --quiet --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   migration:
     build:
       context: .
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=${MONGO_DB}
     volumes:
       - ./data:/app/data
-    entrypoint: >
-      python migration_crud.py import_csv
-      --file data/healthcare_dataset_purge.csv
-      --uri mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=${MONGO_DB}
-      --db ${MONGO_DB}
-      --collection mediccrud
+    command:
+      - python
+      - migration_crud.py
+      - import_csv
+      - --file
+      - data/healthcare_dataset_purge.csv
+      - --uri
+      - mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=${MONGO_DB}
+      - --db
+      - ${MONGO_DB}
+      - --collection
+      - ${MONGO_COLLECTION}
+
+  routines:
+    build:
+      context: .
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=${MONGO_DB}
+    volumes:
+      - ./routines:/app/routines
+    working_dir: /app/routines
+    entrypoint: ["tail", "-f", "/dev/null"]
+
+  dataflow:
+    build:
+      context: .
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=${MONGO_DB}
+    volumes:
+      - .:/app
+      - ../scripts:/app/scripts:ro
+    entrypoint: ["tail", "-f", "/dev/null"]
 
 volumes:
   mongo_data:

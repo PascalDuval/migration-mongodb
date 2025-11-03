@@ -238,6 +238,62 @@ Tests sur une vraie base (optionnel): créez `tests/test_integration_real.py` si
 
 ---
 
+<a id="docker"></a>
+## Exécution avec Docker (sans scripts shell d'init)
+
+Cette section remplace et simplifie `simpledocker/READMEDOCKER.md`.
+
+- Préparez `simpledocker/.env` (non versionné) avec par exemple:
+  - `MONGO_INITDB_ROOT_USERNAME=admin`
+  - `MONGO_INITDB_ROOT_PASSWORD=CHANGER-MOI`
+  - `MONGO_APP_USERNAME=appuser` (dbOwner sur `MONGO_DB`)
+  - `MONGO_APP_PASSWORD=CHANGER-MOI-APP`
+  - `MONGO_READONLY_USERNAME=readonly` (read sur `MONGO_DB`)
+  - `MONGO_READONLY_PASSWORD=CHANGER-MOI-RO`
+  - `MONGO_DB=FirstTry`
+  - `MONGO_COLLECTION=mediccrud`
+
+1) Démarrer MongoDB (depuis `simpledocker/`):
+```
+docker compose up -d mongodb
+```
+
+2) Créer/mettre à jour les utilisateurs (manuel, idempotent):
+```
+python scripts/setup_users.py
+```
+- lit les variables d'environnement / `.env` et crée:
+  - compte dbOwner: `MONGO_APP_USERNAME` sur `MONGO_DB`;
+  - compte read-only: `MONGO_READONLY_USERNAME` sur `MONGO_DB`.
+- aucune fuite de secrets; relancer met à jour mdp/roles.
+
+3) Vérifier les accès (tests rapides intelligents):
+```bash
+# Depuis l'hôte (si variables exportées) ou via le conteneur dataflow:
+docker compose up -d dataflow
+docker compose exec dataflow python /app/scripts/setup_users.py   # si non fait
+docker compose exec dataflow python /app/scripts/verify_access.py
+```
+- Vérifie que le compte dbOwner peut insérer/supprimer et que le compte read-only ne peut pas écrire (attendu).
+
+4) Migration et routines:
+```
+docker compose up --build migration
+docker compose up -d routines
+docker compose exec routines python MedicationByCancerAndResults.py
+```
+
+5) Démo CRUD locale (URI via env si `--uri` absent):
+```
+python scripts/demo_crud_flow.py --db FirstTry --collection mediccrud --readonly
+```
+- Recherche d'URI dans l'ordre: `MONGODB_URI`, `MONGO_URI`, `MONGO_URI_RW` (ou `MONGO_URI_RO` si `--readonly`), sinon `mongodb://localhost:27017`.
+
+6) Sécurité:
+- ne pas committer `.env` (mots de passe fournis séparément),
+- éviter l'admin root dans les scripts applicatifs,
+- rotation simple: modifier `.env` puis relancer `scripts/setup_users.py`.
+
 <a id="faq"></a>
 ## FAQ & dépannage
 
@@ -290,4 +346,3 @@ Créez un nouveau fichier dans `tests/` (ex: `test_top_hospital.py`) et utilisez
 Projet distribué sous licence MIT.
 
 Bon apprentissage et bonne migration !
-

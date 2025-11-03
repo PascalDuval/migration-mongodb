@@ -4,38 +4,31 @@ Affiche un bilan clair (FR) et vérifie à chaque étape que l'opération a bien
 """
 from __future__ import annotations
 
-import os
 import argparse
 import uuid
 from datetime import datetime, timedelta
 from bson import json_util
 
-from scripts.functions_crud.crud_ops import get_collection, DEFAULT_URI, DEFAULT_DB, DEFAULT_COLLECTION
+import os
+from pymongo import MongoClient
+
+# Defaults via environment for Docker/Compose
+DEFAULT_URI = (
+    os.getenv("MONGO_URI")
+    or os.getenv("MIGRATION_MONGODB_URI")
+    or os.getenv("MONGODB_URI")
+    or "mongodb://mongodb:27017"
+)
+DEFAULT_DB = os.getenv("MONGO_DB", "FirstTry")
+DEFAULT_COLLECTION = os.getenv("MONGO_COLLECTION", "mediccrud")
+
+def get_collection(uri: str, db_name: str, coll_name: str):
+    client = MongoClient(uri)
+    return client[db_name][coll_name]
 
 
-def _resolve_uri(cli_uri: str | None, readonly: bool) -> str:
-    if cli_uri:
-        return cli_uri
-    if readonly:
-        # Prefer explicit read-only URIs from env
-        return (
-            os.getenv("MONGO_URI_RO")
-            or os.getenv("MONGODB_URI_RO")
-            or os.getenv("MONGODB_URI_READONLY")
-            or DEFAULT_URI
-        )
-    # Read-write preference order
-    return (
-        os.getenv("MONGODB_URI")
-        or os.getenv("MONGO_URI")
-        or os.getenv("MONGO_URI_RW")
-        or DEFAULT_URI
-    )
-
-
-def main(uri: str | None, db_name: str, coll_name: str, readonly: bool) -> int:
-    uri_eff = _resolve_uri(uri, readonly)
-    coll = get_collection(uri_eff, db_name, coll_name)
+def main(uri: str, db_name: str, coll_name: str) -> int:
+    coll = get_collection(uri, db_name, coll_name)
 
     # Préparer un document unique pour le test
     unique_tag = f"demo-crud-{uuid.uuid4().hex[:8]}"
@@ -124,13 +117,12 @@ def main(uri: str | None, db_name: str, coll_name: str, readonly: bool) -> int:
 
 def parse_args():
     p = argparse.ArgumentParser(description="Demo CRUD flow using functions_crud.get_collection")
-    p.add_argument("--uri", default=None, help="URI MongoDB (fallback to env if absent)")
+    p.add_argument("--uri", default=DEFAULT_URI, help="URI MongoDB")
     p.add_argument("--db", default=DEFAULT_DB, help="Nom de la base")
     p.add_argument("--collection", default=DEFAULT_COLLECTION, help="Nom de la collection")
-    p.add_argument("--readonly", action="store_true", help="Utiliser l'URI RO depuis l'environnement si --uri non fourni")
     return p.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    raise SystemExit(main(args.uri, args.db, args.collection, args.readonly))
+    raise SystemExit(main(args.uri, args.db, args.collection))

@@ -1,13 +1,9 @@
 restaurants.json_
 divers/
+.env
 */__pycache__.py/
 */__pycache__/
 */__init__.py/
 */__init__/
 __init__.py
-docker/
-simpledocker/
-docker/*
-docker-compose.yml
-Dockerfile
-simpledocker/*
+simpledocker/.env
