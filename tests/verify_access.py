@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
-"""
-Quick access checks for MongoDB roles using environment variables.
-
-Validates:
-- appuser (dbOwner) can insert and delete in target DB
-- readonly user cannot write but can read
-
-Environment (examples):
-- MONGO_HOST=localhost, MONGO_PORT=27017
-- MONGO_DB=FirstTry
-- MONGO_APP_USERNAME / MONGO_APP_PASSWORD
-- MONGO_READONLY_USERNAME / MONGO_READONLY_PASSWORD
-
-Usage:
-  python scripts/verify_access.py
-
-Safe: creates a temp doc and removes it.
-"""
 from __future__ import annotations
+
+"""
+Vérifications d'accès MongoDB basées sur les variables d'environnement (.env à la racine).
+
+Valide que:
+- le compte dbOwner peut insérer/supprimer sur la base applicative;
+- le compte read-only peut lire mais ne peut pas écrire.
+
+Utilisation:
+  python -m pytest -q tests/verify_access.py   # en mode test
+  python tests/verify_access.py                 # exécution directe (retourne 0/1)
+"""
 
 import os
 import time
@@ -44,12 +38,11 @@ def check_dbowner(uri: str, db: str) -> bool:
 def check_readonly(uri: str, db: str) -> bool:
     client = MongoClient(uri, serverSelectionTimeoutMS=3000)
     client.admin.command("ping")
-    coll = client[db]["_role_probe"]
-    # Read should work even if collection empty
+    coll = client[db]["__role_probe"]
     _ = coll.find_one({})
     try:
         coll.insert_one({"_probe": "readonly", "ts": time.time()})
-        return False  # Should not be able to write
+        return False
     except Exception:
         return True
 
@@ -65,27 +58,19 @@ def main() -> int:
     ro_pwd = os.getenv("MONGO_READONLY_PASSWORD")
 
     if not all([app_user, app_pwd, ro_user, ro_pwd]):
-        print("Missing env vars: MONGO_APP_*/MONGO_READONLY_* and MONGO_DB/MONGO_HOST/MONGO_PORT")
+        print("Variables manquantes: MONGO_APP_*/MONGO_READONLY_* et MONGO_DB/MONGO_HOST/MONGO_PORT")
         return 2
 
     rw_uri = build_uri(app_user, app_pwd, host, port, db)
     ro_uri = build_uri(ro_user, ro_pwd, host, port, db)
 
     print("[Check] dbOwner insert/delete:", end=" ")
-    try:
-        ok_rw = check_dbowner(rw_uri, db)
-        print("OK" if ok_rw else "FAIL")
-    except Exception as e:
-        print(f"ERROR ({e})")
-        return 1
+    ok_rw = check_dbowner(rw_uri, db)
+    print("OK" if ok_rw else "FAIL")
 
     print("[Check] readOnly permissions:", end=" ")
-    try:
-        ok_ro = check_readonly(ro_uri, db)
-        print("OK" if ok_ro else "FAIL")
-    except Exception as e:
-        print(f"ERROR ({e})")
-        return 1
+    ok_ro = check_readonly(ro_uri, db)
+    print("OK" if ok_ro else "FAIL")
 
     return 0 if (ok_rw and ok_ro) else 1
 

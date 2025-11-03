@@ -62,7 +62,7 @@ def main():
     p.add_argument("--root_user", default=os.getenv("MONGO_INITDB_ROOT_USERNAME"))
     p.add_argument("--root_pwd", default=os.getenv("MONGO_INITDB_ROOT_PASSWORD"))
 
-    p.add_argument("--db", default=os.getenv("MONGO_DB") or os.getenv("APP_DB_NAME", "FirstTry"))
+    p.add_argument("--db", default=os.getenv("MONGO_DB", "FirstTry"))
 
     # dbOwner account (uses existing names from compose/.env)
     p.add_argument("--app_user", default=os.getenv("MONGO_APP_USERNAME", "appuser"))

@@ -29,7 +29,7 @@ Ce dépôt contient un ensemble de scripts Python pour nettoyer, préparer, migr
 
 - Illustrer la migration d'un jeu de données médicales vers MongoDB en respectant les bonnes pratiques.
 - Fiabiliser les types de données (dates, nombres, montants, etc.).
-- Proposer des scripts d'analyse pour vérifier la qualité des données une fois migrées.
+- Proposer des scripts CRUD d'analyse pour vérifier la qualité des données une fois migrées.
 - Fournir une base de tests (unitaires et d'intégration) pour valider la chaîne de migration.
 
 ---
@@ -44,7 +44,7 @@ migration-mongodb/
 ├─ data/                    # Jeux de données bruts et nettoyés (CSV)
 ├─ divers/                  # Exemples, assets et fichiers divers (démos, images)
 ├─ routines/                # Routines d'analyse/agrégation MongoDB (voir détails ci-dessous)
-├─ scripts/                 # Scripts de migration, nettoyage, intégrité et helpers
+├─ scripts/                 # Scripts de migration, nettoyage, intégrité et helpers CRUD
 │  ├─ functions_crud/       # Utilitaires Python 
 ├─ tests/                   # Suite de tests (pytest, mongomock)
 ├─ .gitignore
@@ -145,11 +145,11 @@ Le script `scripts/check_doublons.py` détecte les doublons et produit la versio
 
 | Script                      | Rôle principal                                           |
 |----------------------------|----------------------------------------------------------|
-| `scripts/migration_crud.py` | Migration (import CSV via `import_csv`), recherche et opérations utilitaires |
+| `scripts/migration_crud.py` | Migration et opérations CRUD (import, index, find, etc.) |
 | `scripts/check_doublons.py` | Détection et suppression des doublons dans le CSV        |
 | `scripts/check_integrity.py`| Vérifications basiques d'intégrité des données           |
 
-### Routines d""analyse
+### Analyses CRUD (routines)
 
 | Script                                    | Description                                                   |
 |-------------------------------------------|---------------------------------------------------------------|
@@ -174,7 +174,7 @@ Variables d'environnement supportées par les scripts: `MONGO_URI`, `MONGO_DB`, 
   - Dates: `Date of Admission`, `Discharge Date`
   - Identifiant: `_id` (ObjectId généré automatiquement)
 
-<!-- Section index retirée: plus de création d""index automatique -->
+Index recommandés (créés par `migration_crud.py create_indexes`):
 
 - Index composé sur (`Medical Condition`, `Hospital`)
 - Index simple sur `Name`
@@ -193,17 +193,21 @@ python scripts/check_integrity.py
 
 2) Simuler la migration (dry-run)
 ```bash
-python scripts/migration_crud.py import_csv --file data/healthcare_dataset_purge.csv --dry
+python scripts/migration_crud.py import_csv --dry
 ```
 Affiche un échantillon de documents convertis (sans insertion).
 
 3) Importer réellement les données
 ```bash
-python scripts/migration_crud.py import_csv --file data/healthcare_dataset_purge.csv
+python scripts/migration_crud.py import_csv
 ```
 
+4) Créer les index
+```bash
+python scripts/migration_crud.py create_indexes
+```
 
-4) Lancer des analyses
+5) Lancer des analyses CRUD
 ```bash
 python routines/TopHospital.py
 python routines/AgeByDesease.py
@@ -228,7 +232,7 @@ pytest -v
 
 Contenu principal:
 
-- `tests/test_migration_crud.py` vérifie les fonctions internes (`_safe_int`, `_to_datetime`, `convert_dataframe_types`, etc.) et des opérations de base (avec `mongomock`).
+- `tests/test_migration_crud.py` vérifie les fonctions internes (`_safe_int`, `_to_datetime`, `convert_dataframe_types`, etc.) et des opérations CRUD (avec `mongomock`).
 
 Tests sur une vraie base (optionnel): créez `tests/test_integration_real.py` si nécessaire.
 
@@ -288,7 +292,7 @@ docker compose up -d routines
 docker compose exec routines python MedicationByCancerAndResults.py
 ```
 
-5) Démo (insertion/mise à jour/suppression) locale (URI via env si `--uri` absent):
+5) Démo CRUD locale (URI via env si `--uri` absent):
 ```
 python scripts/demo_crud_flow.py --db FirstTry --collection mediccrud --readonly
 ```
@@ -351,6 +355,4 @@ Créez un nouveau fichier dans `tests/` (ex: `test_top_hospital.py`) et utilisez
 Projet distribué sous licence MIT.
 
 Bon apprentissage et bonne migration !
-
-
 
