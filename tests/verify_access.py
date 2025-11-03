@@ -17,10 +17,11 @@ import os
 import time
 import uuid
 from pymongo import MongoClient
+from urllib.parse import quote_plus
 
 
 def build_uri(user: str, pwd: str, host: str, port: int, db: str) -> str:
-    return f"mongodb://{user}:{pwd}@{host}:{port}/{db}?authSource={db}"
+    return f"mongodb://{quote_plus(user)}:{quote_plus(pwd)}@{host}:{port}/{db}?authSource={db}"
 
 
 def check_dbowner(uri: str, db: str) -> bool:
@@ -77,4 +78,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

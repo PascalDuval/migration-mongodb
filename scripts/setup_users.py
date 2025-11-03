@@ -15,6 +15,7 @@ import os
 import argparse
 from typing import List, Dict, Any
 from pymongo import MongoClient
+from urllib.parse import quote_plus
 
 
 def _required_env(name: str) -> str:
@@ -84,7 +85,9 @@ def main():
     ro_user = args.ro_user
     ro_pwd = args.ro_pwd or _required_env("MONGO_READONLY_PASSWORD")
 
-    admin_uri = f"mongodb://{root_user}:{root_pwd}@{args.host}:{args.port}/admin"
+    enc_user = quote_plus(root_user)
+    enc_pwd = quote_plus(root_pwd)
+    admin_uri = f"mongodb://{enc_user}:{enc_pwd}@{args.host}:{args.port}/admin"
     client = MongoClient(admin_uri)
     db = client[app_db]
 

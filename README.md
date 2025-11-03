@@ -312,6 +312,15 @@ python scripts/demo_crud_flow.py --db FirstTry --collection mediccrud --readonly
 - éviter l'admin root dans les scripts applicatifs,
 - rotation simple: modifier `.env` puis relancer `scripts/setup_users.py`.
 
+Volumes et réinitialisation:
+- Le volume Docker `mongo_data` persiste la base et les identifiants (root + utilisateurs). Changer `MONGO_INITDB_ROOT_*` dans `.env` n’a d’effet que lors du tout premier démarrage.
+- Pour appliquer de nouveaux identifiants root, deux options:
+  - Réinitialiser la base: `docker compose down -v` puis relancer MongoDB, rejouer `scripts/setup_users.py`.
+  - Ou mettre à jour les utilisateurs applicatifs avec l’admin actuel: par exemple
+```
+docker compose exec dataflow python /app/scripts/setup_users.py --root_user root --root_pwd rootpass
+```
+
 <a id="faq"></a>
 ## FAQ & dépannage
 
