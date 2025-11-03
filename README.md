@@ -253,6 +253,15 @@ Cette section remplace et simplifie `simpledocker/READMEDOCKER.md`.
   - `MONGO_DB=FirstTry`
   - `MONGO_COLLECTION=mediccrud`
 
+Copie rapide du modèle d’environnement (.env):
+```bash
+cp simpledocker/.env.example simpledocker/.env
+```
+Windows PowerShell:
+```powershell
+Copy-Item simpledocker/.env.example simpledocker/.env
+```
+
 1) Démarrer MongoDB (depuis `simpledocker/`):
 ```
 docker compose up -d mongodb
