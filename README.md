@@ -47,6 +47,7 @@ migration-mongodb/
 ├─ scripts/                 # Scripts de migration, nettoyage, intégrité et helpers
 │  ├─ functions_crud/       # Utilitaires Python 
 ├─ tests/                   # Suite de tests (pytest, mongomock)
+├─ simpledocker/            # Docker Compose, Dockerfile, exécution conteneurs
 ├─ .gitignore
 ├─ LICENSE
 ├─ README.md
@@ -118,12 +119,16 @@ Pour exécuter également les tests automatisés:
 python -m pip install -r requirements-tests.txt
 ```
 
-### 4) Configurer MongoDB (optionnel mais recommandé)
+### 4) Préconfigurer MongoDB
 
 - Installez MongoDB Community Server ou créez un cluster Atlas.
 - Base par défaut: `FirstTry`, collection: `mediccrud` (créées automatiquement lors de l'import si absentes).
 - Assurez-vous de disposer d'un utilisateur avec droits lecture/écriture (surtout sur Atlas).
 
+
+- Pour la gestion des utilisateurs locaux, utilisez `scripts/setup_users.py` avec un fichier `.env` à la racine (voir `.env.example`).
+- Copier le modèle: `cp .env.example .env` (ou `Copy-Item .env.example .env` sous PowerShell), puis remplir les mots de passe.
+- Exécuter: `python scripts/setup_users.py` (idempotent: crée/ajuste dbOwner et read-only sur `MONGO_DB`).
 ---
 
 <a id="jeux-de-donnees"></a>
@@ -149,7 +154,7 @@ Le script `scripts/check_doublons.py` détecte les doublons et produit la versio
 | `scripts/check_doublons.py` | Détection et suppression des doublons dans le CSV        |
 | `scripts/check_integrity.py`| Vérifications basiques d'intégrité des données           |
 
-### Routines d\u2019analyse
+### Analyses (routines)
 
 | Script                                    | Description                                                   |
 |-------------------------------------------|---------------------------------------------------------------|
@@ -348,6 +353,8 @@ Créez un nouveau fichier dans `tests/` (ex: `test_top_hospital.py`) et utilisez
 Projet distribué sous licence MIT.
 
 Bon apprentissage et bonne migration !
+
+
 
 
 
