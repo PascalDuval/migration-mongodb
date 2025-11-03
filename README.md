@@ -149,7 +149,7 @@ Le script `scripts/check_doublons.py` détecte les doublons et produit la versio
 | `scripts/check_doublons.py` | Détection et suppression des doublons dans le CSV        |
 | `scripts/check_integrity.py`| Vérifications basiques d'intégrité des données           |
 
-### Routines d""analyse
+### Routines d\u2019analyse
 
 | Script                                    | Description                                                   |
 |-------------------------------------------|---------------------------------------------------------------|
@@ -176,9 +176,6 @@ Variables d'environnement supportées par les scripts: `MONGO_URI`, `MONGO_DB`, 
 
 <!-- Section index retirée: plus de création d""index automatique -->
 
-- Index composé sur (`Medical Condition`, `Hospital`)
-- Index simple sur `Name`
-- Index simple sur `Insurance Provider`
 
 ---
 
@@ -351,6 +348,7 @@ Créez un nouveau fichier dans `tests/` (ex: `test_top_hospital.py`) et utilisez
 Projet distribué sous licence MIT.
 
 Bon apprentissage et bonne migration !
+
 
 
 
