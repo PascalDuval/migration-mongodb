@@ -151,8 +151,8 @@ Le script `scripts/check_doublons.py` détecte les doublons et produit la versio
 | Script                      | Rôle principal                                           |
 |----------------------------|----------------------------------------------------------|
 | `scripts/migration_crud.py` | Migration (import CSV via `import_csv`), recherche et opérations utilitaires |
-| `scripts/check_doublons.py` | Détection et suppression des doublons dans le CSV        |
-| `scripts/check_integrity.py`| Vérifications basiques d'intégrité des données           |
+| `scripts/check_doublons.py` | Détection et suppression des doublons dans le CSV (déjà exécuté; vous pouvez partir du CSV purgé) |
+| `scripts/check_integrity.py`| Vérifications basiques d'intégrité des données (déjà exécuté; vous pouvez partir du CSV purgé) |
 
 ### Analyses (routines)
 
@@ -187,7 +187,8 @@ Variables d'environnement supportées par les scripts: `MONGO_URI`, `MONGO_DB`, 
 <a id="utilisation-detaillee"></a>
 ## Utilisation détaillée
 
-1) Nettoyer et préparer les données
+1) (Optionnel) Nettoyer et préparer les données
+Déjà appliqué dans ce dépôt: vous pouvez utiliser directement le fichier purgé `data/healthcare_dataset_purge.csv`.
 ```bash
 python scripts/check_doublons.py
 python scripts/check_integrity.py
@@ -210,6 +211,16 @@ python scripts/migration_crud.py import_csv --file data/healthcare_dataset_purge
 python routines/TopHospital.py
 python routines/AgeByDesease.py
 python routines/MedicationByCancerAndResults.py
+```
+Exemple de sortie (MedicationByCancerAndResults):
+```
+{
+  "Medication": "Paracetamol",
+  "Cancer": "Lung",
+  "TotalPatients": 42,
+  "PositiveTests": 18,
+  "NegativeTests": 24
+}
 ```
 Adaptez/dupliquez les routines selon vos besoins pour explorer les données.
 
@@ -353,6 +364,17 @@ Créez un nouveau fichier dans `tests/` (ex: `test_top_hospital.py`) et utilisez
 Projet distribué sous licence MIT.
 
 Bon apprentissage et bonne migration !
+
+## Automatisation
+
+- Script: `scripts/run_backup_and_migrate.ps1` (PowerShell)
+- Rôle: sauvegarder la collection en JSONL, supprimer la collection, exécuter un dry-run, puis proposer la migration complète.
+- Prise en compte de l'authentification: si `MONGODB_URI`/`MONGO_URI_RW`/`MONGO_URI` est défini, le script l'utilise; à défaut, il construit une URI à partir de `MONGO_APP_USERNAME`/`MONGO_APP_PASSWORD` et `MONGO_DB` (fallback `localhost:27017`).
+- Exemple:
+```
+./scripts/run_backup_and_migrate.ps1 -Db FirstTry -Collection mediccrud
+```
+- Note: le message concernant la création d'index a été retiré car il n'y a plus de création d'index automatique.
 
 
 
