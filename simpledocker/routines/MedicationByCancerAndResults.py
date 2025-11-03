@@ -3,17 +3,27 @@
 from pymongo import MongoClient
 from collections import defaultdict, Counter
 import os
+from urllib.parse import quote_plus
 
 # Paramètres de connexion: privilégie les variables d'environnement du service Compose
 # MONGO_URI est défini dans docker-compose.yml; on accepte aussi MIGRATION_MONGODB_URI/MONGODB_URI
-URI = (
+_uri_env = (
     os.getenv("MONGO_URI")
     or os.getenv("MIGRATION_MONGODB_URI")
     or os.getenv("MONGODB_URI")
-    or "mongodb://mongo:27017"
 )
 DB = os.getenv("MONGO_DB", "FirstTry")
 COL = os.getenv("MONGO_COLLECTION", "mediccrud")
+HOST = os.getenv("MONGO_HOST", "mongodb")
+if _uri_env:
+    URI = _uri_env
+else:
+    user = os.getenv("MONGO_APP_USERNAME")
+    pwd = os.getenv("MONGO_APP_PASSWORD")
+    if user and pwd:
+        URI = f"mongodb://{quote_plus(user)}:{quote_plus(pwd)}@{HOST}:27017/{DB}?authSource={DB}"
+    else:
+        URI = f"mongodb://{HOST}:27017"
 
 client = MongoClient(URI)
 db = client[DB]

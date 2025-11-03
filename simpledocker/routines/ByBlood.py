@@ -3,20 +3,32 @@
 import argparse
 from pymongo.errors import PyMongoError
 import os
+from urllib.parse import quote_plus
 from pymongo import MongoClient
 
 # Defaults via environment for Docker/Compose
-DEFAULT_URI = (
+_URI_ENV = (
     os.getenv("MONGO_URI")
     or os.getenv("MIGRATION_MONGODB_URI")
     or os.getenv("MONGODB_URI")
-    or "mongodb://mongo:27017"
 )
 DEFAULT_DB = os.getenv("MONGO_DB", "FirstTry")
 DEFAULT_COLLECTION = os.getenv("MONGO_COLLECTION", "mediccrud")
+HOST = os.getenv("MONGO_HOST", "mongodb")
+
+def _build_uri(db: str) -> str:
+    if _URI_ENV:
+        return _URI_ENV
+    user = os.getenv("MONGO_APP_USERNAME")
+    pwd = os.getenv("MONGO_APP_PASSWORD")
+    if user and pwd:
+        return f"mongodb://{quote_plus(user)}:{quote_plus(pwd)}@{HOST}:27017/{db}?authSource={db}"
+    return f"mongodb://{HOST}:27017"
+
 
 def get_collection(uri: str, db_name: str, coll_name: str):
-    client = MongoClient(uri)
+    eff_uri = uri or _build_uri(db_name)
+    client = MongoClient(eff_uri)
     return client[db_name][coll_name]
 
 
