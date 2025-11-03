@@ -213,15 +213,6 @@ python routines/AgeByDesease.py
 python routines/MedicationByCancerAndResults.py
 ```
 Exemple de sortie (MedicationByCancerAndResults):
-```
-{
-  "Medication": "Paracetamol",
-  "Cancer": "Lung",
-  "TotalPatients": 42,
-  "PositiveTests": 18,
-  "NegativeTests": 24
-}
-```
 Format tabulaire:
 ```
 Médicament | Tests | % Anormal | % Inconclusive | % Normal
@@ -392,7 +383,6 @@ Bon apprentissage et bonne migration !
 ```
 ./scripts/run_backup_and_migrate.ps1 -Db FirstTry -Collection mediccrud
 ```
-- Note: le message concernant la création d'index a été retiré car il n'y a plus de création d'index automatique.
 
 
 
