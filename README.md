@@ -222,6 +222,15 @@ Exemple de sortie (MedicationByCancerAndResults):
   "NegativeTests": 24
 }
 ```
+Format tabulaire:
+```
+Médicament | Tests | % Anormal | % Inconclusive | % Normal
+Lipitor | 8625 | 32.41% | 34.09% | 33.51%
+Ibuprofen | 8415 | 34.22% | 32.62% | 33.16%
+Paracetamol | 8345 | 33.73% | 33.37% | 32.89%
+Penicillin | 8050 | 34.10% | 33.60% | 32.30%
+Aspirin | 8035 | 34.23% | 32.11% | 33.67%
+```
 Adaptez/dupliquez les routines selon vos besoins pour explorer les données.
 
 ---
