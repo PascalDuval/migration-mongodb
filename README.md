@@ -239,7 +239,7 @@ Tests sur une vraie base (optionnel): créez `tests/test_integration_real.py` si
 
 Cette section remplace et simplifie `simpledocker/READMEDOCKER.md`.
 
-- Préparez `simpledocker/.env` (non versionné) avec par exemple:
+- Préparez `.env` à la racine du projet (non versionné) avec par exemple:
   - `MONGO_INITDB_ROOT_USERNAME=admin`
   - `MONGO_INITDB_ROOT_PASSWORD=CHANGER-MOI`
   - `MONGO_APP_USERNAME=appuser` (dbOwner sur `MONGO_DB`)
@@ -249,13 +249,13 @@ Cette section remplace et simplifie `simpledocker/READMEDOCKER.md`.
   - `MONGO_DB=FirstTry`
   - `MONGO_COLLECTION=mediccrud`
 
-Copie rapide du modèle d’environnement (.env):
+Copie rapide du modèle d'environnement (.env) à la racine:
 ```bash
-cp simpledocker/.env.example simpledocker/.env
+cp .env.example .env
 ```
 Windows PowerShell:
 ```powershell
-Copy-Item simpledocker/.env.example simpledocker/.env
+Copy-Item .env.example .env
 ```
 
 1) Démarrer MongoDB (depuis `simpledocker/`):

@@ -4,4 +4,4 @@ Toute la procédure Docker (sans scripts shell d'init), la préparation du `.env
 
 - Exécution avec Docker (sans scripts shell d'init)
 
-Utilisez également `simpledocker/.env.example` comme modèle et copiez-le en `simpledocker/.env` avant de lancer `docker compose`.
+Utilisez `.env.example` à la racine comme modèle et copiez-le en `.env` avant de lancer `docker compose`.
